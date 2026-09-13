@@ -43,7 +43,7 @@ code{background:var(--bg3);padding:1px 5px;border-radius:5px;font-size:12px}
 .main{display:flex;flex-direction:column;flex:1;min-height:0}
 .stage{background:#000;position:relative}
 .canvasWrap{position:relative;width:100%;background:#000;touch-action:none;overflow:hidden;min-height:220px;display:flex;align-items:center;justify-content:center}
-#cv,#ov{position:absolute;left:0;top:0;transform-origin:0 0;display:block}
+#cv,#ov{position:absolute;left:0;top:0;transform-origin:0 0;display:block;touch-action:none}
 #ov{z-index:2}
 #lens{position:absolute;z-index:6;border:2px solid #fff;border-radius:50%;box-shadow:0 6px 24px rgba(0,0,0,.7);pointer-events:none}
 .drop{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;gap:6px;align-items:center;justify-content:center;
@@ -171,11 +171,40 @@ td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 .kbd{font-size:11px;color:var(--tx3)}
 .kbd b{color:var(--tx2);background:var(--bg3);border:1px solid var(--line2);border-radius:4px;padding:0 4px;font-weight:600}
 
+/* ---------- móvil: el video arriba, fijo, y las opciones deslizándose abajo ----------
+   Antes la página entera se deslizaba: al arrastrar sobre el video se iba todo
+   de viaje y el video desaparecía de la pantalla justo cuando hacía falta verlo. */
+@media (max-width:899px){
+  html,body{height:100%;overflow:hidden}
+  .wrap{height:100vh;height:100dvh;overflow:hidden}
+  .top{position:static;flex:0 0 auto}
+  .disc{font-size:10.5px;line-height:1.35;padding:4px 10px}
+  .main{flex:1;min-height:0;overflow:hidden}
+  .stage{flex:0 0 auto;display:flex;flex-direction:column;min-height:0;
+    height:var(--stageH,52dvh);max-height:78dvh}
+  .canvasWrap{flex:1;min-height:120px}
+  .transport{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:5px 6px}
+  .transport::-webkit-scrollbar{display:none}
+  .transport>*{flex:0 0 auto}
+  .transport .t{margin-left:8px}
+  .tlbox{padding:4px 10px 6px}
+  .tl{height:38px}
+  .tlMark{height:28px}
+  .tlHandle{top:5px;height:26px}
+  .tlPlay{height:32px}
+  .verdict{padding:7px 10px}
+  .verdict .vTitle{font-size:15.5px}
+  .verdict .vSub{font-size:12px}
+  .solo-ancho{display:none}
+  .side{flex:1;min-height:0;overflow:hidden}
+  .panels{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+}
 @media (min-width:900px){
   .main{flex-direction:row}
   .stage{flex:1 1 60%;position:sticky;top:0;align-self:flex-start}
   .side{flex:1 1 40%;max-width:520px;border-left:1px solid var(--line);height:100vh}
   .panels{max-height:none}
+  #bAlto{display:none}
   body{overflow:hidden}
   .wrap{height:100vh}
   .main{overflow:hidden}
@@ -191,7 +220,7 @@ td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
       <span class="vTitle" id="vTitle">SIN ANALIZAR</span>
       <span class="vSub" id="vSub">Carga un video y marca los puntos para obtener un veredicto.</span>
     </div>
-    <div class="disc"><b id="verTag" style="color:#7dd3fc">v7</b> · Herramienta de entrenamiento. No sustituye el criterio de un árbitro IPF. · El video se procesa 100% en tu dispositivo y no se sube a ningún lado.</div>
+    <div class="disc"><b id="verTag" style="color:#7dd3fc">v15</b> · <span class="solo-ancho">Herramienta de entrenamiento. </span>No sustituye el criterio de un árbitro IPF. · El video se procesa 100% en tu dispositivo<span class="solo-ancho"> y no se sube a ningún lado</span>.</div>
   </header>
 
   <div class="main">
@@ -218,6 +247,8 @@ td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
         <button class="btn pri" id="bPlay" title="Reproducir/pausar">▶</button>
         <button class="btn" id="bNext" title="Frame siguiente">›</button>
         <button class="btn" id="bNext10" title="10 frames adelante">»</button>
+        <button class="btn" id="bSoloBarra" title="Mostrar sólo el recorrido de la barra">Sólo barra</button>
+        <button class="btn" id="bAlto" title="Repartir la pantalla entre el video y las opciones">Video ½</button>
         <span class="t" id="tInfo">—</span>
       </div>
 
@@ -235,9 +266,9 @@ td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
     <section class="side">
       <nav class="tabs" id="tabs">
         <button data-t="video" class="on">Video</button>
-        <button data-t="puntos">Puntos</button>
         <button data-t="escala">Escala</button>
         <button data-t="frames">Frames clave</button>
+        <button data-t="puntos">Puntos</button>
         <button data-t="reps">Reps</button>
         <button data-t="reglas">Reglas</button>
         <button data-t="medidas">Medidas</button>
@@ -256,6 +287,13 @@ td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
             <div class="hint">Se procesa localmente con <code>createObjectURL</code>. No hay servidor, no hay subida.</div>
             <div id="vInfo" class="hint"></div>
             <div id="vErr"></div>
+            <h3>Orientación</h3>
+            <div class="hint">Si el video entró acostado, enderézalo acá. Lo que ya hayas marcado gira con él, no se pierde.</div>
+            <div class="row">
+              <button class="btn sm" id="bRotL">⟲ Girar izquierda</button>
+              <button class="btn sm" id="bRotR">⟳ Girar derecha</button>
+              <span class="hint" style="margin:0" id="rotInfo">0°</span>
+            </div>
           </div>
 
           <div class="card">
@@ -482,7 +520,8 @@ td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
           <div class="card">
             <h2>Frames clave</h2>
             <button class="btn wide" id="bAutoKF">Proponer automáticamente</button>
-            <div class="hint">La propuesta usa la trayectoria de la barra. Corrige lo que haga falta: toca “usar actual” con el frame que corresponda en pantalla.</div>
+            <div class="hint">La propuesta usa la misma trayectoria que se dibuja sobre el video. Corrige lo que haga falta: toca “Usar actual” con el frame que corresponda en pantalla.</div>
+            <div id="kfOut"></div>
             <div id="kfList"></div>
           </div>
           <div class="card">
@@ -573,6 +612,13 @@ td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
             <div class="hint">Si la descarga está bloqueada por el navegador, usa “Ver en grande” y mantén presionada la imagen para guardarla.</div>
           </div>
           <div class="card">
+            <h2>Video con el recorrido dibujado</h2>
+            <div class="hint">Graba el rango recortado con lo que veas en pantalla encima: el recorrido de la barra creciendo, celeste al bajar y rojo al subir. Sale en WebM, a velocidad normal. Si sólo quieres el recorrido, apaga las otras capas con el botón <b>Sólo barra</b> antes de exportar.<br>Va en dos pasadas: primero arma los frames y después los graba al ritmo real, así que tarda más de lo que dura el clip.</div>
+            <button class="btn pri wide" id="bVid">Exportar video</button>
+            <div id="vidOut" class="hint"></div>
+          </div>
+
+          <div class="card">
             <h2>Análisis (JSON)</h2>
             <div class="row">
               <button class="btn" id="bJson">Descargar JSON</button>
@@ -634,7 +680,7 @@ td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
             <h2>La punta de la barra y el ángulo de cámara</h2>
             <p>Los discos tapan el hombro justo en el plano lateral, y además dicen algo que ningún otro objeto del cuadro dice: el disco es un <b>círculo</b>, así que si en la imagen se ve circular, la cámara está exactamente sobre el eje de la barra y el perfil es puro; si se ve como elipse, la diferencia entre los dos radios <b>mide</b> cuánto se apartó.</p>
             <p>Se marca con un recuadro de cuatro líneas verdes que arrastras hasta encerrar el disco más grande, y se confirma con <b>¡BIEN!</b>. El centro del recuadro queda como centro de la barra, que es el punto que después se sigue.</p>
-            <p>Al disco no se lo sigue por su textura sino por su <b>borde</b>: las letras y los rayos giran mientras la barra sube y baja, pero un círculo se ve igual desde cualquier giro. Por eso el seguimiento de la barra aguanta cosas que tumbarían a un seguidor de parche.</p>
+            <p>Al disco se lo sigue comparando el <b>recuadro que marcaste</b> frame a frame. Marcar el disco hace dos cosas de una: fija el tamaño de ese recuadro y da la escala en centímetros sin depender de nada más.</p><p>El color del recorrido sale de las <b>vueltas</b> del recorrido, no de comparar un frame con el anterior: para cambiar de celeste a rojo la barra tiene que haber girado de verdad —al menos 1,5 cm, o un 3 % del recorrido si es más—. Así un tembleque del seguimiento en plena subida no pinta una bajada que nunca existió.</p>
             <p>Marcar el disco hace además dos cosas de una: da la escala en cm sin depender de nada más, y reemplaza tu estimación del giro de cámara por un valor medido, que entra en el paralaje de todas las medidas. Si lo que aparece comprimido es la vertical y no la horizontal, eso no es giro: es cámara más alta o más baja que la barra.</p>
           </div>
           <div class="card">
@@ -712,7 +758,7 @@ const KF = [
 /* ---------------------------------- estado --------------------------------- */
 const S = {
   lift:'squat', view:'lateral', side:'left', facing:'right',
-  fps:30, dur:0, vw:0, vh:0, name:'', hasVideo:false,
+  fps:30, dur:0, vw:0, vh:0, natW:0, natH:0, rot:0, name:'', hasVideo:false,
   nFrames:1, cur:0, inA:0, inB:0,
   marks:{}, auto:{}, tracked:{},          // tracked: { punto: { frame: {x,y,score} } }
   lines:{ bench:null, floor:null, belt:null },
@@ -724,7 +770,7 @@ const S = {
   keyFrames:{ setup:null, descentStart:null, bottom:null, ascentStart:null, lockout:null, rack:null },
   manual:{},
   cfg:{ sigmaPx:1.5, k:1.96, yawDeg:5, camHcm:20, camZm:4, hipAdj:0, kneeAdj:2, tripod:false, wide:false, occlusion:false },
-  layers:{ skel:true, ang:true, cotas:true, path:true, vref:true, unc:true, depth:true },
+  layers:{ skel:true, ang:true, cotas:true, path:true, vref:true, unc:true, depth:true, pathFull:false },
   armed:null, tool:'point', autoNext:true, mode:null,
   zoom:1, pan:{ x:0, y:0 },
   A:null           // resultado del análisis
@@ -795,7 +841,8 @@ vid.addEventListener('error', () => {
   $('#vErr').innerHTML = '<div class="errbox">El navegador no pudo decodificar este video. Prueba convertirlo a MP4 (H.264) o WebM.</div>';
 });
 vid.addEventListener('loadedmetadata', () => {
-  S.vw = vid.videoWidth; S.vh = vid.videoHeight; S.dur = vid.duration || 0;
+  S.natW = vid.videoWidth; S.natH = vid.videoHeight; S.rot = 0;
+  S.vw = S.natW; S.vh = S.natH; S.dur = vid.duration || 0;
   if (!S.vw || !S.vh) {
     $('#vErr').innerHTML = '<div class="errbox">El archivo no tiene pista de imagen utilizable.</div>';
     return;
@@ -819,6 +866,34 @@ vid.addEventListener('loadedmetadata', () => {
   }
   finishLoad();
 });
+/** Gira el video 90° y lleva con él todo lo ya marcado, para no perder el trabajo. */
+function rotarVideo(delta) {
+  if (!S.hasVideo) return;
+  const d = ((delta % 360) + 360) % 360;
+  if (!d) return;
+  const W1 = S.vw, H1 = S.vh;
+  const map = (p) => {
+    if (!p || p.x === undefined) return p;
+    if (d === 90) return { x:H1 - p.y, y:p.x };
+    if (d === 180) return { x:W1 - p.x, y:H1 - p.y };
+    return { x:p.y, y:W1 - p.x };
+  };
+  const mapObj = (o) => { if (!o) return o; const q = map(o); for (const kk in o) if (kk !== 'x' && kk !== 'y') q[kk] = o[kk]; return q; };
+  for (const f in S.marks) for (const k in S.marks[f]) S.marks[f][k] = mapObj(S.marks[f][k]);
+  for (const k in S.tracked) for (const f in S.tracked[k]) S.tracked[k][f] = mapObj(S.tracked[k][f]);
+  for (const f in S.auto) for (const k in S.auto[f]) S.auto[f][k] = mapObj(S.auto[f][k]);
+  LINES.forEach(ln => { const o = S.lines[ln.k]; if (o) { o.a = map(o.a); o.b = map(o.b); } });
+  S.calib.p1 = map(S.calib.p1); S.calib.p2 = map(S.calib.p2);
+  if (S.plate) { S.plate.c = map(S.plate.c); S.plate.v = map(S.plate.v); S.plate.h = map(S.plate.h); }
+  S.box = null;
+  S.rot = (S.rot + d) % 360;
+  if (d !== 180) { S.vw = H1; S.vh = W1; }
+  cv.width = S.vw; cv.height = S.vh; ov.width = S.vw; ov.height = S.vh;
+  markDirty++;
+  fitCanvas(); vinfo();
+  gotoFrame(S.cur);
+  refreshAll();
+}
 function finishLoad() {
   S.hasVideo = true;
   cv.width = S.vw; cv.height = S.vh; ov.width = S.vw; ov.height = S.vh;
@@ -837,7 +912,10 @@ function finishLoad() {
 
 function vinfo() {
   $('#vInfo').innerHTML = '<b>' + S.name + '</b><br>' + S.vw + '×' + S.vh + ' px · ' +
-    fmt(S.dur, 2) + ' s · ' + S.fps + ' fps declarados · ' + S.nFrames + ' frames';
+    fmt(S.dur, 2) + ' s · ' + S.fps + ' fps declarados · ' + S.nFrames + ' frames' +
+    (S.rot ? ' · girado ' + S.rot + '°' : '');
+  const ri = $('#rotInfo');
+  if (ri) ri.textContent = (S.rot || 0) + '°' + (S.vh > S.vw ? ' (vertical)' : ' (horizontal)');
 }
 
 /* Estimación de fps con requestVideoFrameCallback (silenciosa, no crítica) */
@@ -903,9 +981,21 @@ function doSeek(i, cb) {
 }
 function seekAsync(i) { return new Promise(res => gotoFrame(i, res)); }
 
+/* Muchos videos de celular llegan acostados. La rotación se aplica UNA vez, al
+   dibujar el frame, y desde ahí todo el resto de la app —marcas, seguimiento,
+   medidas— trabaja sobre la imagen ya derecha, sin enterarse.                  */
+function pintarVideo(c2, w, h) {
+  const r = S.rot || 0;
+  if (!r) { c2.drawImage(vid, 0, 0, w, h); return; }
+  c2.save();
+  if (r === 90) { c2.translate(w, 0); c2.rotate(Math.PI / 2); c2.drawImage(vid, 0, 0, h, w); }
+  else if (r === 180) { c2.translate(w, h); c2.rotate(Math.PI); c2.drawImage(vid, 0, 0, w, h); }
+  else { c2.translate(0, h); c2.rotate(-Math.PI / 2); c2.drawImage(vid, 0, 0, h, w); }
+  c2.restore();
+}
 function drawFrame() {
   if (!S.hasVideo) return;
-  try { ctx.drawImage(vid, 0, 0, cv.width, cv.height); } catch (e) {}
+  try { pintarVideo(ctx, cv.width, cv.height); } catch (e) {}
   drawOverlay();
   drawTimeline();
 }
@@ -1183,10 +1273,11 @@ ov.addEventListener('pointerdown', e => {
     if (d < bd) { bd = d; best = pd.k; }
   });
   if (best && bd < tol) {
-    pushU();
-    setPt(best, S.cur, p.x, p.y);
-    drag = { kind:'pt', k:best };
-    renderPtList(); drawOverlay(); showLens(e, p); return;
+    // En el teléfono es facilísimo rozar el video y correr un punto ya marcado.
+    // Agarrarlo no lo mueve: hay que ARRASTRARLO. Hasta que el dedo no recorra
+    // unos píxeles no se toca la marca, así que un toque suelto no rompe nada.
+    drag = { kind:'pt', k:best, espera:{ x:e.clientX, y:e.clientY } };
+    showLens(e, getPt(best, S.cur) || p); return;
   }
   toast('Elige un punto en la pestaña Puntos, o toca más cerca de uno ya marcado para moverlo');
 });
@@ -1197,6 +1288,10 @@ ov.addEventListener('pointermove', e => {
     fitCanvas(); return;
   }
   if (!drag) return;
+  if (drag.espera) {
+    if (Math.hypot(e.clientX - drag.espera.x, e.clientY - drag.espera.y) < 6) return;
+    drag.espera = null; pushU();
+  }
   const p = toVideo(e);
   if (drag.kind === 'pt') { setPt(drag.k, S.cur, p.x, p.y); showLens(e, p); }
   else if (drag.kind === 'cal') { S.calib[drag.which] = p; recalcCal(); renderCal(); }
@@ -1445,6 +1540,51 @@ function barSeries() {
 }
 const bIdx = f => f - S.inA;
 
+/** Posiciones del centro del disco en el rango, exactamente las que se dibujan:
+    las confiables, más las dudosas que siguen siendo coherentes con la anterior.
+    Que lo que se ve dibujado y lo que se usa para proponer frames clave salgan
+    de la misma función es lo que evita el "la barra está seguida pero la app
+    dice que no". Devuelve [{f,x,y,firme}] en orden.                           */
+function barPuntos(hasta, fuente) {
+  if (hasta === undefined || hasta === null) hasta = S.inB;
+  const T = fuente || S.tracked.bar || null;
+  const crudos = [];
+  for (let i = S.inA; i <= hasta; i++) {
+    const t = T && T[i];
+    if (t) { crudos.push({ f:i, x:t.x, y:t.y, firme:t.score >= TRACK_MIN }); continue; }
+    const g = getPt('bar', i);
+    if (g && (g.src === 'manual' || g.src === 'track' || g.src === 'interp')) crudos.push({ f:i, x:g.x, y:g.y, firme:true });
+  }
+  // paso típico entre posiciones, para saber qué salto es plausible: se mide
+  // entre las confiables si las hay, y si no las hay, entre todas
+  const firmes = [], todos = [];
+  for (let i = 1; i < crudos.length; i++) {
+    const d = dist(crudos[i], crudos[i - 1]);
+    todos.push(d);
+    if (crudos[i].firme && crudos[i - 1].firme) firmes.push(d);
+  }
+  const pasos = firmes.length > 3 ? firmes : todos;
+  pasos.sort((a, b) => a - b);
+  const pasoTip = pasos.length ? pasos[Math.floor(pasos.length / 2)] : 6;
+  const saltoMax = Math.max(15, pasoTip * 5);
+  const pts = [];
+  let ult = null;
+  crudos.forEach(o => {
+    // El primero ancla la cadena aunque venga flojo: si TODO el seguimiento es de
+    // poca confianza —pasa con videos oscuros o movidos— antes no se dibujaba
+    // nada y la app se quedaba muda, en vez de dibujar punteado y avisar.
+    if (!ult || o.firme || dist(o, ult) <= saltoMax) { pts.push(o); ult = o; }
+  });
+  return pts;
+}
+/** Primer y último frame del rango con seguimiento guardado (de cualquier confianza) */
+function barSeguidoRango() {
+  const T = S.tracked.bar; if (!T) return null;
+  let a = null, b = null;
+  for (const k in T) { const f = +k; if (a === null || f < a) a = f; if (b === null || f > b) b = f; }
+  return a === null ? null : { a:a, b:b, n:Object.keys(T).length };
+}
+
 /* ---- detección de descenso durante el ascenso (S3 / B5 / D1) ---- */
 function findDescent(B, fromF, toF, thrCm) {
   if (!B.dense || !S.calib.pxPerCm) return null;
@@ -1546,14 +1686,26 @@ function footTravel() {
 
 /* -------------------------- frames clave automáticos ------------------------ */
 function autoKeyFrames() {
-  const B = barSeries();
-  if (!B.dense) { toast('Necesito la barra seguida en el rango (pestaña Frames clave)'); return false; }
+  // La propuesta se hace con la trayectoria que se ve dibujada, no con la serie
+  // estricta del motor: son frames que el usuario revisa y corrige, no un
+  // veredicto. Los criterios del reglamento siguen exigiendo barSeries().dense,
+  // así que un seguimiento flojo no puede colarse como medida buena.
+  const n = S.inB - S.inA + 1;
+  const pts = barPuntos(S.inB);
+  const seg = barSeguidoRango();
+  if (pts.length < 4) return { ok:false, motivo:'sin', n:n, pts:pts.length, seg:seg };
+  // huecos grandes: si lo seguido no cubre el rango, decirlo con números
+  const cob = pts.length / n;
   const ys = [];
-  for (let f = S.inA; f <= S.inB; f++) { const p = B.pts[bIdx(f)]; if (p) ys.push({ f:f, y:projN(p) }); }
-  if (ys.length < 4) return false;
+  for (let i = 0; i < pts.length; i++) {
+    let a = 0, c = 0;
+    for (let j = Math.max(0, i - 2); j <= Math.min(pts.length - 1, i + 2); j++) { a += projN(pts[j]); c++; }
+    ys.push({ f:pts[i].f, y:a / c });
+  }
   let low = ys[0], high = ys[0];
   ys.forEach(o => { if (o.y > low.y) low = o; if (o.y < high.y) high = o; });
   const rom = low.y - high.y;
+  if (rom < 8) return { ok:false, motivo:'plano', n:n, pts:pts.length, rom:rom, seg:seg };
   const K = S.keyFrames;
   if (S.lift === 'deadlift') {
     K.setup = S.inA; K.bottom = S.inA; K.descentStart = null;
@@ -1561,7 +1713,7 @@ function autoKeyFrames() {
     for (const o of ys) { if ((low.y - o.y) > rom * 0.03) { start = o.f; break; } }
     K.ascentStart = start; K.lockout = high.f; K.rack = S.inB;
   } else {
-    // punto bajo: centro de la meseta, no el primer maximo
+    // punto bajo: centro de la meseta, no el primer máximo
     const flat = ys.filter(o => (low.y - o.y) < rom * 0.02);
     K.setup = S.inA;
     K.bottom = flat.length ? flat[Math.floor(flat.length / 2)].f : low.f;
@@ -1575,7 +1727,58 @@ function autoKeyFrames() {
     for (const o of ys) { if (o.f > low.f && (o.y - high.y) < rom * 0.05) { lo = o.f; break; } }
     K.lockout = lo; K.rack = S.inB;
   }
-  return true;
+  const firmes = pts.filter(o => o.firme).length;
+  return { ok:true, n:n, pts:pts.length, firmes:firmes, cob:cob, rom:rom, seg:seg,
+           ptsPri:pts[0].f, ptsUlt:pts[pts.length - 1].f,
+           flojo:(cob < 0.9 || firmes < pts.length * 0.6) };
+}
+
+/** Explica en el panel por qué no se pudo proponer, y ofrece el arreglo a mano. */
+function kfMensaje(r) {
+  const box = $('#kfOut'); if (!box) return;
+  const seg = r.seg;
+  const donde = seg ? 'La barra está seguida del frame <b>' + seg.a + '</b> al <b>' + seg.b + '</b>' : '';
+  const rango = 'el rango va del <b>' + S.inA + '</b> al <b>' + S.inB + '</b>';
+  let html = '';
+  if (r.ok) {
+    html = '<div class="okbox">Frames clave propuestos con ' + r.pts + ' de ' + r.n + ' frames del rango. ' +
+      'Revísalos: son una propuesta, no una medida.</div>';
+    if (r.cob < 0.9) {
+      const ult = r.ptsUlt, pri = r.ptsPri;
+      html += '<div class="warnbox">Ojo: sólo hay posición de la barra en ' + r.pts + ' de los ' + r.n +
+        ' frames del rango' + (pri !== undefined ? ' (del <b>' + pri + '</b> al <b>' + ult + '</b>)' : '') +
+        '. Lo que pasa fuera de ahí no entró en la propuesta: sigue la barra en todo el rango, o recorta el rango.</div>';
+    }
+    if (r.firmes < r.pts * 0.6) html += '<div class="warnbox">El seguimiento viene flojo: sólo ' +
+      fmt(100 * r.firmes / r.pts, 0) + ' % de las posiciones son firmes, así que la propuesta puede estar corrida por ' +
+      'algunos frames. Compruébala con el video y corrige con “Usar actual”.</div>';
+  } else if (r.motivo === 'plano') {
+    html = '<div class="warnbox">En este rango la barra apenas se mueve (' + fmt(r.rom, 1) + ' px de recorrido vertical), ' +
+      'así que no hay de dónde sacar el punto bajo ni el bloqueo. ' +
+      (seg ? donde + ', y ' + rango + '. ' : '') + 'Ajusta el rango a una repetición completa.</div>';
+  } else if (seg && (seg.a > S.inB || seg.b < S.inA)) {
+    html = '<div class="warnbox">' + donde + ', pero ' + rango + ': no se tocan. ' +
+      'Vuelve a seguir la barra en este rango, o lleva el rango a lo que ya está seguido.</div>';
+  } else if (seg) {
+    html = '<div class="warnbox">' + donde + ', y ' + rango + ': sólo hay posición en ' + r.pts + ' de sus ' + r.n +
+      ' frames. Sigue la barra otra vez con el rango puesto, o recorta el rango a lo que ya está seguido.</div>';
+  } else {
+    html = '<div class="warnbox">Todavía no hay ninguna posición de la barra en el rango. ' +
+      'Marca el disco con el recuadro y usa “Seguir la barra en el rango”.</div>';
+  }
+  box.innerHTML = html;
+  if (!r.ok || r.cob < 0.9) {
+    const fila = document.createElement('div'); fila.className = 'row';
+    const b1 = document.createElement('button'); b1.className = 'btn sm pri'; b1.textContent = 'Seguir la barra en el rango';
+    b1.onclick = () => { $('#bTrack').click(); };
+    fila.appendChild(b1);
+    if (seg && seg.b > seg.a + 3) {
+      const b2 = document.createElement('button'); b2.className = 'btn sm'; b2.textContent = 'Llevar el rango a lo seguido (' + seg.a + '–' + seg.b + ')';
+      b2.onclick = () => { pushU(); S.inA = clamp(seg.a, 0, S.nFrames - 1); S.inB = clamp(seg.b, S.inA + 1, S.nFrames - 1); refreshAll(); toast('Rango ' + S.inA + '–' + S.inB); };
+      fila.appendChild(b2);
+    }
+    box.appendChild(fila);
+  }
 }
 
 /* ------------------------------ repeticiones -------------------------------
@@ -1619,6 +1822,28 @@ function detectReps() {
   }
   if (!reps.length) return { err:'No se cerró ninguna repetición: la barra no volvió a subir por encima del 75 % del recorrido. Revisa el rango recortado.' };
 
+  // Caminar hacia atrás al sacar la barra, y sobre todo devolverla a los soportes,
+  // también hacen subir y bajar la altura. Lo que los distingue de una repetición
+  // es que la barra se corre MUCHO en horizontal: en una sentadilla se queda casi
+  // sobre el mismo punto. Se descartan esos tramos en vez de contarlos como reps.
+  const descartadas = [];
+  const repsOk = reps.filter(r => {
+    let dx = 0;
+    const x0 = B.pts[bIdx(r.bottom)] ? projU(B.pts[bIdx(r.bottom)]) : null;
+    if (x0 === null) return true;
+    for (let f = r.top0; f <= r.top1; f++) {
+      const p = B.pts[bIdx(f)]; if (!p) continue;
+      dx = Math.max(dx, Math.abs(projU(p) - x0));
+    }
+    const vert = Math.abs(val(r.top1) - val(r.bottom)) * S.calib.pxPerCm;   // en px
+    if (vert > 5 && dx > vert * 0.55) { descartadas.push({ f:r.bottom, dx:dx / S.calib.pxPerCm }); return false; }
+    return true;
+  });
+  if (!repsOk.length) {
+    return { err:'Los tramos de subida y bajada que encontré se mueven demasiado en horizontal: parecen la caminata de salida o la devolución a los soportes, no repeticiones. Recorta el rango a la serie.' };
+  }
+  reps.length = 0; repsOk.forEach(r => reps.push(r));
+
   const relCal = calRel();
   reps.forEach((r, i) => {
     r.n = i + 1;
@@ -1630,6 +1855,10 @@ function detectReps() {
     r.vPeak = vp / 100; r.vPeakF = vpF;
     r.eccS = (r.bottom - r.top0) / S.fps;
     r.eccRom = val(r.top0) - val(r.bottom);
+    r.vEcc = r.eccS > 0 ? (r.eccRom / 100) / r.eccS : null;     // velocidad media de bajada
+    let vpe = 0;
+    for (let f = r.top0; f <= r.bottom; f++) { const v = B.v[bIdx(f)]; if (v !== null && v !== undefined && -v > vpe) vpe = -v; }
+    r.vEccPeak = vpe / 100;
     // bandas: el ROM arrastra el error de los puntos y de la escala; el tiempo, un frame en cada extremo
     const sPt = Math.sqrt(2) * Math.max(S.cfg.sigmaPx, 1.5) / S.calib.pxPerCm;
     r.romU = Math.hypot(sPt, relCal * Math.abs(r.romCm)) * S.cfg.k;
@@ -1638,7 +1867,7 @@ function detectReps() {
     r.vU = r.vMean === null ? null : Math.abs(r.vMean) * Math.hypot(relRom, relT);
   });
   S.reps = reps;
-  return { reps:reps, rom:rom };
+  return { reps:reps, rom:rom, descartadas:descartadas };
 }
 
 /* --------------------------- calidad de la toma ---------------------------- */
@@ -2283,8 +2512,11 @@ function lineSide(p, L) {
     celeste; si sube, es rojo. Con histéresis para que el ruido no parpadee.     */
 function barDirs(pts) {
   const n = pts.length;
-  if (n < 2) return new Array(n).fill(null);
-  const ys = pts.map(o => o.y);
+  const dirs = new Array(n).fill(null), vel = new Array(n).fill(null);
+  if (n < 2) return { dirs:dirs, vel:vel };
+  // Altura a lo largo de la vertical de referencia: si la cámara está torcida,
+  // bajar no es crecer en y, sino avanzar por esa vertical.
+  const ys = pts.map(o => projN(o));
   const sm = ys.map((v, i) => {
     let a = 0, c = 0;
     for (let j = Math.max(0, i - 2); j <= Math.min(n - 1, i + 2); j++) { a += ys[j]; c++; }
@@ -2292,16 +2524,47 @@ function barDirs(pts) {
   });
   let mn = Infinity, mx = -Infinity;
   sm.forEach(v => { mn = Math.min(mn, v); mx = Math.max(mx, v); });
-  const thr = Math.max(0.4, (mx - mn) * 0.004);
-  const dirs = new Array(n).fill(null);
-  let cur = null;
+  // Cuánto tiene que moverse la barra en contra para creer que cambió de sentido.
+  // Comparar un frame con el anterior no sirve: medio píxel de ruido del seguimiento
+  // en plena subida pintaba tramos celestes de bajada que nunca existieron.
+  const pxcm = S.calib.pxPerCm || 0;
+  const delta = Math.max(pxcm ? pxcm * 1.5 : 4, (mx - mn) * 0.03, 4);
+  // Se buscan las VUELTAS del recorrido —los extremos que sobresalen más que ese
+  // margen— y recién después se pinta cada tramo entre vueltas según a dónde fue.
+  // Así el cambio de color cae en el punto exacto en que la barra giró, sin el
+  // retraso que tendría si hubiera que esperar a acumular el margen.
+  const E = [];
+  let dir = null, cand = 0, iMin = 0, iMax = 0;
   for (let i = 1; i < n; i++) {
-    const d = sm[i] - sm[i - 1];
-    if (d > thr) cur = 'exc';           // y crece hacia abajo: la barra baja
-    else if (d < -thr) cur = 'con';
-    dirs[i] = cur;
+    const v = sm[i];
+    if (dir === 'exc') {
+      if (v > sm[cand]) cand = i;                                   // sigue bajando
+      else if (sm[cand] - v > delta) { E.push(cand); dir = 'con'; cand = i; }
+    } else if (dir === 'con') {
+      if (v < sm[cand]) cand = i;
+      else if (v - sm[cand] > delta) { E.push(cand); dir = 'exc'; cand = i; }
+    } else {
+      if (v < sm[iMin]) iMin = i;
+      if (v > sm[iMax]) iMax = i;
+      if (v - sm[iMin] > delta) { dir = 'exc'; cand = i; }
+      else if (sm[iMax] - v > delta) { dir = 'con'; cand = i; }
+    }
   }
-  return dirs;
+  const cortes = [0].concat(E, [n - 1]);
+  for (let k = 1; k < cortes.length; k++) {
+    const a = cortes[k - 1], b = cortes[k];
+    if (b <= a) continue;
+    const d = sm[b] > sm[a] ? 'exc' : 'con';     // y mayor = más abajo
+    for (let i = a; i <= b; i++) dirs[i] = d;
+  }
+  // Velocidad con el mismo suavizado y el mismo signo que el color, para que el
+  // cartel no diga "sube" sobre una línea celeste.
+  for (let i = 0; i < n; i++) {
+    const a = Math.max(0, i - 1), b = Math.min(n - 1, i + 1);
+    const df = pts[b].f - pts[a].f;
+    if (df > 0) vel[i] = (sm[b] - sm[a]) / df * S.fps;   // px/s, positivo hacia abajo
+  }
+  return { dirs:dirs, vel:vel };
 }
 
 /** Fase del levantamiento en un frame: 'exc' (bajada) | 'con' (subida) | null */
@@ -2545,57 +2808,57 @@ function drawOverlay() {
     }
   }
 
-  /* trayectoria de la barra, desde la punta: celeste la bajada, rojo la subida */
+  /* Recorrido del centro del disco: celeste mientras baja, rojo mientras sube.
+     Se traza hasta el frame actual, como una estela que crece con el video, y
+     SÓLO con posiciones que el seguimiento dio por buenas: unir un frame bueno
+     con uno descartado es lo que dibujaba aquella línea que se iba de paseo.  */
   if (L.path) {
-    // Recorrido crudo del seguimiento, incluidos los frames que no pasaron el
-    // control de calidad: si no se dibujaran, parecería que no hizo nada.
-    const crudo = [];
     const fuente = (tracking && vista && vista.bar) ? vista.bar : (S.tracked.bar || null);
-    if (fuente) {
-      for (let i = S.inA; i <= S.inB; i++) { const t = fuente[i]; if (t) crudo.push({ f:i, x:t.x, y:t.y, ok:t.score >= TRACK_MIN }); }
-      if (crudo.length > 1) {
-        const dc = barDirs(crudo);
-        c.save();
-        c.strokeStyle = 'rgba(0,0,0,.5)'; c.lineWidth = LW() * 2.2;
-        c.beginPath(); c.moveTo(crudo[0].x, crudo[0].y);
-        for (let i = 1; i < crudo.length; i++) c.lineTo(crudo[i].x, crudo[i].y);
-        c.stroke();
-        for (let i = 1; i < crudo.length; i++) {
-          const d = dc[i];
-          c.strokeStyle = d === 'exc' ? 'rgba(56,189,248,.85)' : d === 'con' ? 'rgba(239,68,68,.85)' : 'rgba(255,255,255,.5)';
-          c.lineWidth = LW() * (d === 'exc' ? 2.0 : 1.2);
-          c.beginPath(); c.moveTo(crudo[i - 1].x, crudo[i - 1].y); c.lineTo(crudo[i].x, crudo[i].y); c.stroke();
-        }
-        crudo.forEach(o => { if (o.ok) return; c.fillStyle = 'rgba(239,68,68,.8)'; c.beginPath(); c.arc(o.x, o.y, LW() * 1.1, 0, 7); c.fill(); });
-        c.restore();
-      }
-    }
-    const pts = [];
-    for (let i = S.inA; i <= S.inB; i++) { const q = getPt('bar', i); if (q) pts.push({ f:i, x:q.x, y:q.y }); }
+    const hasta = L.pathFull ? S.inB : f;
+    // El disco no desaparece del video, así que la línea tampoco debería cortarse:
+    // los frames de baja confianza se dibujan igual —punteados y más finos— siempre
+    // que la posición sea plausible respecto del frame anterior. Si el seguimiento
+    // se fue de verdad a otro lado, el salto delata y ahí sí se corta.
+    const pts = barPuntos(hasta, fuente);
     if (pts.length > 1) {
-      const todo = new Path2D();
-      todo.moveTo(pts[0].x, pts[0].y);
-      for (let i = 1; i < pts.length; i++) todo.lineTo(pts[i].x, pts[i].y);
-      c.strokeStyle = 'rgba(0,0,0,.6)'; c.lineWidth = LW() * 2.8; c.lineCap = 'round'; c.stroke(todo);
-      // La bajada y la subida suelen pasar por el mismo lugar: se dibuja la
-      // excéntrica más gruesa y debajo, así el celeste asoma alrededor del rojo.
-      const dirs = barDirs(pts);
-      const orden = [['exc', 3.2], [null, 1.2], ['con', 1.8]];
-      orden.forEach(o => {
+      const bd = barDirs(pts), dirs = bd.dirs;
+      const CORTE = 6;   // más de 6 frames sin dato: se corta la línea, no se inventa el tramo
+      const trazo = (i, col, ancho) => {
+        if (pts[i].f - pts[i - 1].f > CORTE) return;
+        const dudoso = !pts[i].firme || !pts[i - 1].firme;
+        c.save();
+        c.strokeStyle = col; c.lineWidth = ancho * (dudoso ? 0.55 : 1);
+        if (dudoso) c.setLineDash([LW() * 2, LW() * 1.6]);
+        c.beginPath(); c.moveTo(pts[i - 1].x, pts[i - 1].y); c.lineTo(pts[i].x, pts[i].y); c.stroke();
+        c.restore();
+      };
+      c.lineCap = 'round'; c.lineJoin = 'round';
+      for (let i = 1; i < pts.length; i++) trazo(i, 'rgba(0,0,0,.55)', LW() * 3.8);
+      // la bajada más gruesa y primero: subida y bajada suelen pasar por el mismo
+      // lugar, así el celeste asoma alrededor del rojo en vez de desaparecer
+      [['exc', 3.4], [null, 1.4], ['con', 2.0]].forEach(o => {
         for (let i = 1; i < pts.length; i++) {
-          const ph = dirs[i];
-          if (ph !== o[0]) continue;
-          c.strokeStyle = FASE_COL[ph === null ? 'null' : ph];
-          c.lineWidth = LW() * o[1];
-          c.beginPath(); c.moveTo(pts[i - 1].x, pts[i - 1].y); c.lineTo(pts[i].x, pts[i].y); c.stroke();
+          if (dirs[i] !== o[0]) continue;
+          trazo(i, FASE_COL[o[0] === null ? 'null' : o[0]], LW() * o[1]);
         }
       });
-      const idx = pts.findIndex(o => o.f === f);
-      const aqui = idx >= 0 ? pts[idx] : null;
-      if (aqui) {
-        c.fillStyle = FASE_COL[dirs[idx] === null ? 'null' : dirs[idx]];
-        c.strokeStyle = '#000'; c.lineWidth = LW() * 0.8;
-        c.beginPath(); c.arc(aqui.x, aqui.y, LW() * 2.2, 0, 7); c.fill(); c.stroke();
+      // dónde está la barra ahora, y a qué velocidad va
+      const idx = pts.length - 1;
+      const aqui = pts[idx];
+      if (aqui && (L.pathFull ? true : aqui.f >= f - 2)) {
+        const col = FASE_COL[dirs[idx] === null ? 'null' : dirs[idx]];
+        c.fillStyle = col; c.strokeStyle = '#000'; c.lineWidth = LW() * 0.9;
+        c.beginPath(); c.arc(aqui.x, aqui.y, LW() * 3.2, 0, 7); c.fill(); c.stroke();
+        // el cartel sale del mismo cálculo que el color: nunca dicen cosas distintas
+        const vpx = bd.vel[idx], dd = dirs[idx];
+        if (dd && vpx !== null && isFinite(vpx)) {
+          const vcm = cmOf(Math.abs(vpx));
+          const val = vcm === null ? fmt(Math.abs(vpx), 0) + ' px/s' : fmt(vcm, 0) + ' cm/s';
+          if (vcm === null ? Math.abs(vpx) > 2 : vcm > 1)
+            chipText(c, aqui.x + LW() * 4.5, aqui.y + FS() * 0.35,
+              (dd === 'exc' ? '▼ baja ' : '▲ sube ') + val,
+              dd === 'exc' ? 'rgba(8,60,90,.92)' : 'rgba(110,20,20,.92)', '#fff');
+        }
       }
     }
     // rebote marcado en rojo
@@ -2770,22 +3033,69 @@ function plot(cn, series, opts) {
   // cursor
   const cx = X(S.cur / S.fps);
   if (isFinite(cx)) { c.strokeStyle = '#fff'; c.lineWidth = 1; c.beginPath(); c.moveTo(cx, pad.t); c.lineTo(cx, h - pad.b); c.stroke(); }
-  cn._map = { X:X, x0:x0, x1:x1, pad:pad, w:w };
+  cn._map = { X:X, x0:x0, x1:x1, pad:pad, w:w, h:h, series:series, unit:(opts && opts.unit) || '' };
   c.fillStyle = '#71808f'; c.font = '10px sans-serif';
   c.fillText(fmt(x0, 1) + ' s', pad.l, h - 5);
   c.fillText(fmt(x1, 1) + ' s', w - pad.r - 28, h - 5);
   if (opts && opts.unit) c.fillText(opts.unit, 3, 10);
 }
+/** Segundo del gráfico bajo el puntero, en el eje de tiempo del video. */
+function chartTiempo(cn, clientX) {
+  const m = cn._map; if (!m) return null;
+  const r = cn.getBoundingClientRect();
+  const px = (clientX - r.left) * (m.w / Math.max(1, r.width));
+  const util = Math.max(1, m.w - m.pad.l - m.pad.r);
+  return m.x0 + (px - m.pad.l) / util * (m.x1 - m.x0);
+}
 function chartClick(cn) {
   cn.addEventListener('pointerdown', e => {
-    const m = cn._map; if (!m) return;
-    const r = cn.getBoundingClientRect();
-    const px = (e.clientX - r.left);
-    const t = m.x0 + (px - m.pad.l) / Math.max(1, (m.w - m.pad.l - 8)) * (m.x1 - m.x0);
-    gotoFrame(Math.round(t * S.fps));
+    const t = chartTiempo(cn, e.clientX);
+    if (t !== null) gotoFrame(Math.round(t * S.fps));
   });
 }
-['#chBarY','#chBarV','#chAng'].forEach(s => chartClick($(s)));
+/* Al pasar el puntero por un gráfico, decir qué valor hay en ese segundo. */
+let chTip = null;
+function chartTipEl() {
+  if (!chTip) {
+    chTip = document.createElement('div');
+    chTip.style.cssText = 'position:fixed;z-index:300;pointer-events:none;display:none;background:rgba(8,12,18,.96);' +
+      'border:1px solid #3a4757;border-radius:8px;padding:6px 9px;font-size:12px;line-height:1.35;color:#e8edf4;' +
+      'white-space:nowrap;box-shadow:0 6px 18px rgba(0,0,0,.55)';
+    document.body.appendChild(chTip);
+  }
+  return chTip;
+}
+function chartHover(cn) {
+  const ocultar = () => { if (chTip) chTip.style.display = 'none'; };
+  cn.addEventListener('pointerleave', ocultar);
+  cn.addEventListener('pointercancel', ocultar);
+  cn.addEventListener('pointermove', e => {
+    const m = cn._map;
+    const t = chartTiempo(cn, e.clientX);
+    if (!m || !m.series || t === null || t < m.x0 - 0.05 || t > m.x1 + 0.05) return ocultar();
+    const filas = [];
+    m.series.forEach(s => {
+      let mejor = null;
+      s.data.forEach(d => {
+        if (!d || d.y === null || d.y === undefined || !isFinite(d.y)) return;
+        const dd = Math.abs(d.x - t);
+        if (!mejor || dd < mejor.d) mejor = { d:dd, y:d.y };
+      });
+      if (!mejor) return;
+      let v = fmt(mejor.y, m.unit === '°' ? 0 : 1) + ' ' + m.unit;
+      if (m.unit === 'cm/s') v += ' (' + fmt(mejor.y / 100, 2) + ' m/s)';
+      filas.push('<span style="color:' + s.color + '">■</span> ' + v);
+    });
+    if (!filas.length) return ocultar();
+    const tip = chartTipEl();
+    tip.innerHTML = '<b>' + fmt(t, 2) + ' s</b> · frame ' + Math.round(t * S.fps) + '<br>' + filas.join('<br>');
+    tip.style.display = 'block';
+    const ancho = tip.offsetWidth || 150;
+    tip.style.left = Math.max(6, Math.min(window.innerWidth - ancho - 8, e.clientX + 14)) + 'px';
+    tip.style.top = Math.max(8, e.clientY - (tip.offsetHeight || 50) - 12) + 'px';
+  });
+}
+['#chBarY','#chBarV','#chAng'].forEach(s => { chartClick($(s)); chartHover($(s)); });
 
 function drawCharts() {
   const A = S.A; if (!A || !A.bar) return;
@@ -2833,7 +3143,7 @@ async function renderCompare() {
     const cn = $(pair[0]);
     cn.width = S.vw; cn.height = S.vh;
     const c = cn.getContext('2d');
-    try { c.drawImage(vid, 0, 0, S.vw, S.vh); } catch (e) {}
+    try { pintarVideo(c, S.vw, S.vh); } catch (e) {}
     c.drawImage(ov, 0, 0);
     $(pair[2]).textContent = 'frame ' + pair[1] + ' · ' + fmt(pair[1] / S.fps, 2) + ' s';
   }
@@ -2977,6 +3287,9 @@ function boxDone(ok) {
     recalcCal();
     toast('Disco marcado y escala fijada: ' + fmt(S.calib.pxPerCm, 2) + ' px/cm');
   } else toast('Disco marcado en el frame ' + S.cur);
+  if (S.cur < S.inA || S.cur > S.inB) {
+    toast('Ojo: lo marcaste en el frame ' + S.cur + ', fuera del rango ' + S.inA + '–' + S.inB);
+  }
   refreshAll();
 }
 function renderPlate() {
@@ -3120,19 +3433,35 @@ function renderReps(r) {
     calSeg = q.length ? q.reduce((a, b) => a + b, 0) / q.length : 1;
   }
   box.innerHTML =
-    '<table><tr><th>Rep</th><th>Vel<br>m/s</th><th>Pico<br>m/s</th><th>Dur<br>s</th><th>ROM<br>cm</th><th>Exc<br>s</th><th></th></tr>' +
+    '<table><tr><th>Rep</th><th style="color:#7dd3fc">Baja<br>m/s</th><th style="color:#fca5a5">Sube<br>m/s</th>' +
+    '<th>Pico<br>m/s</th><th>Dur<br>s</th><th>ROM<br>cm</th><th></th></tr>' +
     reps.map(r2 =>
       '<tr><td><b>' + r2.n + '</b></td>' +
-      '<td class="num">' + fmt(r2.vMean, 3) + '<br><small>± ' + fmt(r2.vU, 3) + '</small></td>' +
+      '<td class="num" style="color:#7dd3fc">' + fmt(r2.vEcc, 3) + '<br><small>' + fmt(r2.eccS, 2) + ' s</small></td>' +
+      '<td class="num" style="color:#fca5a5">' + fmt(r2.vMean, 3) + '<br><small>± ' + fmt(r2.vU, 3) + '</small></td>' +
       '<td class="num">' + fmt(r2.vPeak, 2) + '</td>' +
       '<td class="num">' + fmt(r2.durS, 2) + '</td>' +
       '<td class="num">' + fmt(r2.romCm, 1) + '<br><small>± ' + fmt(r2.romU, 1) + '</small></td>' +
-      '<td class="num">' + fmt(r2.eccS, 2) + '</td>' +
       '<td><button class="btn sm" data-rep="' + r2.n + '">Ver</button></td></tr>').join('') +
     '</table>' +
+    '<div class="hint"><b style="color:#7dd3fc">Baja</b> = velocidad media de la bajada (excéntrica). ' +
+    '<b style="color:#fca5a5">Sube</b> = velocidad media de la subida (concéntrica), que es la que se usa en VBT.</div>' +
     '<div class="hint">Frames: ' + reps.map(r2 => r2.n + ') ' + r2.top0 + '→' + r2.bottom + '→' + r2.top1).join(' · ') + '</div>' +
+    ((r && r.descartadas && r.descartadas.length)
+      ? '<div class="hint">Descarté ' + r.descartadas.length + ' tramo(s) de subida y bajada porque la barra se corrió demasiado en horizontal (' +
+        r.descartadas.map(o => fmt(o.dx, 0) + ' cm en el frame ' + o.f).join(', ') + '): eso es caminar o devolver la barra, no una repetición.</div>'
+      : '') +
+    '<div class="row"><button class="btn sm" id="bRecortarSerie">Recortar el rango a la serie</button></div>' +
     (S.fps < 60 ? '<div class="warnbox">A ' + S.fps + ' fps la columna <b>Pico</b> es poco confiable: el máximo real puede caer entre frames. La velocidad media aguanta mucho mejor.</div>' : '') +
     '<div class="hint">Todo esto se apoya en que los fps declarados (' + S.fps + ') sean los reales, y en el seguimiento del disco (correlación media ' + fmt(calSeg * 100, 0) + ' %).</div>';
+  const bRec = $('#bRecortarSerie');
+  if (bRec) bRec.onclick = () => {
+    const m = Math.round(S.fps * 0.5);
+    S.inA = Math.max(0, reps[0].top0 - m);
+    S.inB = Math.min(S.nFrames - 1, reps[reps.length - 1].top1 + m);
+    refreshAll();
+    toast('Rango recortado a la serie: ' + S.inA + ' a ' + S.inB + '. Seguir la barra ahora va a ser más rápido y preciso.');
+  };
   $$('#repsOut button[data-rep]').forEach(b => {
     b.onclick = () => {
       const r2 = reps[+b.dataset.rep - 1];
@@ -3192,7 +3521,8 @@ function renderTables() {
 }
 function renderToggles() {
   const box = $('#layerToggles'); box.innerHTML = '';
-  const names = { skel:'Esqueleto', ang:'Ángulos', cotas:'Cotas', path:'Trayectoria', vref:'Vertical de ref.', unc:'Incertidumbre', depth:'Línea de profundidad' };
+  const names = { path:'Recorrido de la barra', pathFull:'Recorrido completo (no estela)', skel:'Esqueleto', ang:'Ángulos',
+                  cotas:'Cotas', vref:'Vertical de ref.', unc:'Incertidumbre', depth:'Línea de profundidad' };
   for (const k in names) {
     const l = document.createElement('label'); l.className = 'tg';
     const i = document.createElement('input'); i.type = 'checkbox'; i.checked = !!S.layers[k];
@@ -3243,7 +3573,7 @@ function canReadPixels() {
 }
 function grayOf() {
   const w = wcv.width, h = wcv.height;
-  wctx.drawImage(vid, 0, 0, w, h);
+  pintarVideo(wctx, w, h);
   const d = wctx.getImageData(0, 0, w, h).data;
   const g = new Float32Array(w * h);
   for (let i = 0, j = 0; i < d.length; i += 4, j++) g[j] = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114);
@@ -3259,8 +3589,9 @@ function patchOf(g, w, h, cx, cy, half) {
 }
 function sadOf(g, w, h, tpl, half, cx, cy) {
   const n = 2 * half + 1;
+  const paso = half > 30 ? 4 : 2;   // plantillas grandes se muestrean más ralo, o no termina más
   let acc = 0, cnt = 0;
-  for (let y = 0; y < n; y += 2) for (let x = 0; x < n; x += 2) {
+  for (let y = 0; y < n; y += paso) for (let x = 0; x < n; x += paso) {
     const sx = clamp(Math.round(cx - half + x), 0, w - 1), sy = clamp(Math.round(cy - half + y), 0, h - 1);
     acc += Math.abs(g[sy * w + sx] - tpl[y * n + x]); cnt++;
   }
@@ -3301,26 +3632,42 @@ function gradOf(g, w, h) {
   return { gx:gx, gy:gy, w:w, h:h };
 }
 const CIRC_N = 48;
-/** Media de la componente radial del gradiente sobre la circunferencia (cx,cy,R). */
-function circScore(G, cx, cy, R) {
+/** Qué tan bien explica un borde circular la imagen alrededor de (cx,cy,R).
+    No alcanza con el promedio del gradiente radial: un fondo de rayas verticales
+    —o los parantes de un rack— puede dar un promedio alto en media vuelta y
+    quedarse quieto mientras la barra se va. Por eso se exige además que la
+    MAYORÍA de la circunferencia acompañe: un disco tiene borde en toda la vuelta,
+    un patrón de fondo no.  sgn=0 devuelve el promedio crudo, para decidir la
+    polaridad la primera vez.                                                   */
+function circScore(G, cx, cy, R, sgn) {
   const w = G.w, h = G.h;
-  let acc = 0, n = 0;
+  let acc = 0, n = 0, favor = 0;
   for (let a = 0; a < CIRC_N; a++) {
     const th = 2 * Math.PI * a / CIRC_N, c = Math.cos(th), sn = Math.sin(th);
     const x = Math.round(cx + c * R), y = Math.round(cy + sn * R);
     if (x < 1 || y < 1 || x >= w - 1 || y >= h - 1) continue;
     const i = y * w + x;
-    acc += G.gx[i] * c + G.gy[i] * sn;
-    n++;
+    const rad = G.gx[i] * c + G.gy[i] * sn;
+    acc += rad; n++;
+    if (sgn && sgn * rad > 0) favor++;
   }
-  return n ? acc / n : 0;
+  // Si buena parte de la circunferencia cae fuera del cuadro, esto no es un disco
+  // medible: sin este corte, un puñado de muestras en una esquina da un puntaje
+  // altísimo y el buscador se escapa de la imagen persiguiéndolo.
+  if (!n || n < CIRC_N * 0.85) return sgn ? -1e6 : 0;
+  // Probé pesar además por cuánta vuelta acompaña el borde, para que un fondo
+  // rayado no pudiera imitar al disco. Medido, empeora: deforma el paisaje de
+  // búsqueda y el seguimiento pierde el disco. Queda la media simple, que es la
+  // que está verificada.
+  const media = acc / n;
+  return sgn ? sgn * media : media;
 }
 /** Ajusta el radio probando alrededor del declarado; devuelve {R, val}. */
 function fitRadius(G, cx, cy, R0, sgn) {
   let best = { R:R0, val:-1e9 };
   for (let k = -4; k <= 4; k++) {
     const R = R0 * (1 + k * 0.02);
-    const v = sgn * circScore(G, cx, cy, R);
+    const v = circScore(G, cx, cy, R, sgn);
     if (v > best.val) best = { R:R, val:v };
   }
   return best;
@@ -3329,11 +3676,11 @@ function searchCirc(G, st, Rad, cx, cy) {
   const sgn = st.sgn, R = st.R;
   let best = { s:-1e9, x:cx, y:cy };
   for (let dy = -Rad; dy <= Rad; dy++) for (let dx = -Rad; dx <= Rad; dx++) {
-    const v = sgn * circScore(G, cx + dx, cy + dy, R);
+    const v = circScore(G, cx + dx, cy + dy, R, sgn);
     if (v > best.s) best = { s:v, x:cx + dx, y:cy + dy };
   }
   const bx = best.x, by = best.y, s0 = best.s;
-  const at = (x, y) => sgn * circScore(G, x, y, R);
+  const at = (x, y) => circScore(G, x, y, R, sgn);
   const sx0 = at(bx - 1, by), sx1 = at(bx + 1, by), sy0 = at(bx, by - 1), sy1 = at(bx, by + 1);
   const ddx = (sx1 - sx0) / (2 * (2 * s0 - sx0 - sx1) || 1e6);
   const ddy = (sy1 - sy0) / (2 * (2 * s0 - sy0 - sy1) || 1e6);
@@ -3420,7 +3767,7 @@ async function buildGrayCache(out) {
   const grabar = f => {
     if (f < S.inA || f > S.inB || cache[f - S.inA]) return;
     try {
-      wctx.drawImage(vid, 0, 0, w, h);
+      pintarVideo(wctx, w, h);
       const d = wctx.getImageData(0, 0, w, h).data;
       const g = new Uint8Array(w * h);
       for (let i = 0, j = 0; i < d.length; i += 4, j++) g[j] = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114);
@@ -3493,9 +3840,31 @@ async function trackPoints(keys, out) {
         'El marcado manual frame a frame sigue funcionando igual.</div>');
     return;
   }
-  keys = keys.filter(k => markedIdx(k).some(f => f >= S.inA && f <= S.inB));
+  const dentro = keys.filter(k => markedIdx(k).some(f => f >= S.inA && f <= S.inB));
+  if (!dentro.length) {
+    // Caso típico: el disco se marcó con el recuadro y DESPUÉS se recortó el rango,
+    // así que la marca existe pero quedó afuera. Decirlo, y ofrecer las dos salidas.
+    const sueltos = [];
+    keys.forEach(k => { const m = markedIdx(k); if (m.length) sueltos.push({ k:k, f:m[0] }); });
+    if (sueltos.length) {
+      msg('<div class="warnbox"><b>La marca existe, pero quedó fuera del rango.</b><br>' +
+          sueltos.map(o => PT[o.k].n + ' está marcado en el frame <b>' + o.f + '</b>').join('<br>') +
+          '<br>El rango recortado va del <b>' + S.inA + '</b> al <b>' + S.inB + '</b>, y el seguimiento sólo recorre eso.</div>' +
+          '<button class="btn sm" id="bAmpliar">Ampliar el rango para incluirla</button> ' +
+          '<button class="btn sm" id="bMarcarAqui">Marcar el disco en el frame ' + S.inA + '</button>');
+      const amp = $('#bAmpliar'), maq = $('#bMarcarAqui');
+      if (amp) amp.onclick = () => {
+        sueltos.forEach(o => { S.inA = Math.min(S.inA, o.f); S.inB = Math.max(S.inB, o.f); });
+        S.reps = []; refreshAll(); toast('Rango ampliado: ' + S.inA + ' a ' + S.inB + '. Volvé a seguir la barra.');
+      };
+      if (maq) maq.onclick = () => { gotoFrame(S.inA); boxStart(); };
+    } else {
+      msg('<div class="warnbox">Todavía no marcaste nada. Marca el disco con el recuadro (pestaña Escala) y volvé a intentarlo.</div>');
+    }
+    return;
+  }
+  keys = dentro;
   keys.sort((a, b) => ORDEN.indexOf(a) - ORDEN.indexOf(b));   // los padres primero
-  if (!keys.length) { msg('<div class="warnbox">No hay ningún punto marcado dentro del rango recortado. Marca al menos un frame y vuelve a intentarlo.</div>'); return; }
 
   tracking = true;
   const back = S.cur;
@@ -3513,9 +3882,16 @@ async function trackPoints(keys, out) {
   const w = wcv.width, h = wcv.height;
   const pgT = plateGeom();
   const Rbar = pgT ? Math.max(pgT.rh, pgT.rv) * sc : null;         // radio del disco en la imagen de trabajo
-  const halfBar = pgT ? clamp(Math.round(Rbar * 0.75), 10, 46) : clamp(Math.round(W / 22), 10, 34);
+  const halfBar = pgT ? clamp(Math.round(Rbar * 0.95), 12, 60) : clamp(Math.round(W / 22), 10, 34);
   const halfOf = k => k === 'bar' ? halfBar : clamp(Math.round(W / 34), 8, 22);
-  const anular = k => k === 'bar' && Rbar !== null && Rbar >= 8;   // al disco se lo sigue por anillos
+  /* Al disco se lo sigue por su PARCHE, no por su borde circular.
+     El detector de círculo lo escribí porque en mi video de prueba el disco giraba
+     rápido; en una sentadilla real gira un par de grados en toda la serie. En
+     cambio un disco real tiene anillos concéntricos, y un detector de círculos
+     tiene ahí varios círculos donde engancharse: salta entre ellos y dibuja un
+     garabato. El parche completo del disco —letras, anillos, agujero— es mucho
+     más distinguible y no tiene esa ambigüedad. */
+  const anular = k => false;
   const radOf  = k => k === 'bar' ? clamp(Math.round(W / 26), 10, 30) : clamp(Math.round(W / 44), 8, 20);
 
   const largo = {};
@@ -3556,14 +3932,16 @@ async function trackPoints(keys, out) {
           if (!anil && PADRE[k] && est[PADRE[k]] && est[PADRE[k]][f]) {
             st[k].th = Math.atan2(m.y - est[PADRE[k]][f].y, m.x - est[PADRE[k]][f].x); st[k].dth = 0;
           }
-          est[k][f] = { x:m.x, y:m.y, score:1, anchor:true };
+          st[k].ancla = f;                                       // desde acá se cuenta la deriva
+          est[k][f] = { x:m.x, y:m.y, score:1, anchor:true, desde:0 };
           continue;
         }
         if (!st[k] && seed && seed[k] && seed[k][f]) {           // arranca donde terminó la pasada anterior
           const q = seed[k][f];
           st[k] = anil ? iniCirc(q.x * sc, q.y * sc)
                        : { cx:q.x * sc, cy:q.y * sc, tpl:patchOf(g, w, h, q.x * sc, q.y * sc, half), vx:0, vy:0 };
-          est[k][f] = { x:q.x, y:q.y, score:q.score };
+          st[k].ancla = f;
+          est[k][f] = { x:q.x, y:q.y, score:q.score, desde:0 };
           continue;
         }
         const o = st[k]; if (!o) continue;
@@ -3590,7 +3968,21 @@ async function trackPoints(keys, out) {
                    : searchOf(g, w, h, o.tpl, half, radOf(k), px0, py0);
           modo = anil ? 'disco' : 'parche';
         }
-        o.vx = (b.x - o.cx) * 0.8; o.vy = (b.y - o.cy) * 0.8;
+        // La velocidad predicha necesita tope. Sin él, un solo paso en falso la
+        // realimenta: la predicción del frame siguiente cae más lejos todavía, el
+        // buscador se engancha con cualquier otro disco del gimnasio y se va del
+        // cuadro. Una barra no puede moverse más de lo que abarca la búsqueda.
+        // El tope tiene que dejar pasar el movimiento real de una barra —que
+        // acelera fuerte al arrancar la subida— y sólo cortar la realimentación.
+        // Penalizar además cada paso "grande" hacía lo contrario: frenaba el
+        // seguimiento justo en la parte rápida y lo dejaba atrás. Quién se fue de
+        // paseo lo dice la comparación ida/vuelta, que es una medición, no una
+        // sospecha.
+        const vmax = radOf(k) * 1.6;
+        let nvx = (b.x - o.cx) * 0.85, nvy = (b.y - o.cy) * 0.85;
+        const vmod = Math.hypot(nvx, nvy);
+        if (vmod > vmax) { nvx = nvx / vmod * vmax; nvy = nvy / vmod * vmax; }
+        o.vx = nvx; o.vy = nvy;
         o.cx = b.x; o.cy = b.y;
         // Que el parche "se parezca" no dice casi nada de la posición: un cuerpo se
         // deforma y el parecido cae aunque el punto esté bien. Lo que sí predice el
@@ -3601,7 +3993,8 @@ async function trackPoints(keys, out) {
                                           : clamp(1 - (b.s - 15) / 40, 0, 1);
         const sigPx = (b.sig === undefined ? SIG_MAX : b.sig) / sc;     // en píxeles del video
         const localiza = clamp(1 - sigPx / 8, 0, 1);
-        est[k][f] = { x:b.x / sc, y:b.y / sc, score:Math.min(parecido, localiza), modo:modo, sig:+sigPx.toFixed(2) };
+        est[k][f] = { x:b.x / sc, y:b.y / sc, score:Math.min(parecido, localiza),
+                      modo:modo, sig:+sigPx.toFixed(2), desde:Math.abs(f - (o.ancla === undefined ? f : o.ancla)) };
         if (modo !== 'disco') {
           const np = patchOf(g, w, h, b.x, b.y, half);
           for (let i = 0; i < np.length; i++) o.tpl[i] = o.tpl[i] * 0.85 + np[i] * 0.15;
@@ -3646,23 +4039,28 @@ async function trackPoints(keys, out) {
       if (!cands.length) continue;
       const anchor = cands.find(c => c.anchor);
       if (anchor) { S.tracked[k][f] = { x:anchor.x, y:anchor.y, score:1 }; continue; }
-      // Con tres pasadas alcanza con que DOS coincidan: exigir que las tres estén
-      // de acuerdo hace que una sola pasada mala tire abajo un frame que está bien.
       let fb = 0, pos = cands[0], sc2 = cands[0].score;
       if (cands.length >= 2) {
-        let par = null;
-        for (let i = 0; i < cands.length; i++) for (let j = i + 1; j < cands.length; j++) {
-          const d = dist(cands[i], cands[j]);
-          if (!par || d < par.d) par = { a:cands[i], b:cands[j], d:d };
+        fb = dist(cands[0], cands[1]);
+        // Si coinciden, el promedio de las dos es mejor que cualquiera de ellas.
+        // Si NO coinciden, una se fue: descartar las dos deja al usuario sin nada,
+        // así que se conserva la que viene de más cerca de una marca suya —la que
+        // menos frames lleva acumulando deriva— y se anota que hubo desacuerdo.
+        if (fb <= FB_REF) {
+          pos = { x:(cands[0].x + cands[1].x) / 2, y:(cands[0].y + cands[1].y) / 2 };
+          sc2 = Math.max(cands[0].score, cands[1].score);
+        } else {
+          const d0 = cands[0].desde === undefined ? 1e9 : cands[0].desde;
+          const d1 = cands[1].desde === undefined ? 1e9 : cands[1].desde;
+          pos = d0 <= d1 ? cands[0] : cands[1];
+          sc2 = pos.score;
         }
-        fb = par.d;
-        pos = { x:(par.a.x + par.b.x) / 2, y:(par.a.y + par.b.y) / 2 };
-        sc2 = Math.max(par.a.score, par.b.score);
-        pos.modo = par.a.modo; pos.sig = Math.max(par.a.sig || 0, par.b.sig || 0);
+        pos.modo = cands[0].modo; pos.sig = Math.max(cands[0].sig || 0, cands[1].sig || 0);
       }
       const coincide = cands.length > 1 ? clamp(1 - fb / FB_REF, 0, 1) : 0.6;   // sin segunda opinión, confianza tope
       S.tracked[k][f] = { x:pos.x, y:pos.y, score:Math.min(sc2, coincide),
-                          fb:+fb.toFixed(2), modo:pos.modo, sig:pos.sig };
+                          fb:+fb.toFixed(2), modo:pos.modo, sig:pos.sig,
+                          desde:(pos.desde === undefined ? null : pos.desde) };
     }
   }
 
@@ -3678,22 +4076,42 @@ async function trackPoints(keys, out) {
     const avg = q.length ? q.reduce((a, b) => a + b, 0) / q.length : 0;
     const malos = q.filter(v => v < TRACK_MIN).length;
     const sg = fs.map(f => S.tracked[k][f].sig || 0).filter(v => v > 0);
-    return { k:k, n:q.length, avg:avg, malos:malos, arco:arco, sig:sg.length ? sg.reduce((a, b) => a + b, 0) / sg.length : null,
+    // primer frame donde la ida y la vuelta dejan de coincidir: ahí se perdió
+    let quiebre = null;
+    for (let f = S.inA; f <= S.inB && quiebre === null; f++) {
+      const t = S.tracked[k][f];
+      if (t && (t.fb || 0) > FB_REF * 2) quiebre = f;
+    }
+    return { k:k, n:q.length, avg:avg, malos:malos, arco:arco, quiebre:quiebre,
+             sig:sg.length ? sg.reduce((a, b) => a + b, 0) / sg.length : null,
              fb:fb.length ? fb.reduce((a, b) => a + b, 0) / fb.length : 0 };
   });
   const flojos = filas.filter(r => r.malos > r.n * 0.25);
+  const perdidos = flojos.filter(r => r.fb > FB_REF * 2 && r.quiebre !== null);
   msg('<table><tr><th>Punto</th><th>Frames</th><th>Confianza</th><th>± px</th><th>Ida/vuelta</th><th>Descartados</th></tr>' +
       filas.map(r => '<tr><td>' + PT[r.k].n + (r.arco > r.n / 2 ? '<br><small>sobre el hueso</small>' : '') +
         '</td><td class="num">' + r.n + '</td><td class="num">' + fmt(r.avg * 100, 0) +
         ' %</td><td class="num">' + (r.sig === null ? '—' : fmt(r.sig, 1)) + '</td><td class="num">' + fmt(r.fb, 1) +
         ' px</td><td class="num">' + r.malos + '</td></tr>').join('') + '</table>' +
-      (flojos.length
+      (perdidos.length
+        ? '<div class="errbox"><b>El seguimiento se perdió, no es que el video esté mal.</b><br>' +
+          'La columna <b>± px</b> dice que la imagen localiza bien el objeto, pero <b>ida/vuelta</b> es enorme: ' +
+          'recorriendo el rango hacia adelante y hacia atrás se termina en lugares distintos. Eso significa que en algún ' +
+          'frame el buscador saltó a otra cosa redonda del gimnasio —otro disco, un agujero del rack— y siguió tan contento.<br>' +
+          perdidos.map(r => '<b>' + PT[r.k].n + '</b>: se desvía alrededor del frame <b>' + r.quiebre + '</b>.').join('<br>') +
+          '<br><b>Qué hacer:</b> ve a ese frame, vuelve a marcar ahí el centro del disco (o marca el recuadro de nuevo) y sigue otra vez. ' +
+          'Cada marca manual reancla el seguimiento hacia los dos lados, así que dos o tres marcas repartidas en la serie suelen alcanzar. ' +
+          'Si el rango incluye el camino al rack o la devolución, recórtalo a la serie: ahí es donde más se pierde.</div>' +
+          perdidos.map(r => '<button class="btn sm" data-quiebre="' + r.quiebre + '">Ir al frame ' + r.quiebre + '</button>').join(' ')
+        : flojos.length
         ? '<div class="warnbox"><b>No se puede seguir con confianza:</b> ' + flojos.map(r => PT[r.k].n).join(', ') + '.<br>' +
-          'Pasa cuando alrededor del punto no hay nada distinguible —el medio de un muslo de un solo color se parece a sí mismo 5 cm más arriba— ' +
-          'o cuando la ida y la vuelta no coinciden, que es la señal de que el seguimiento se fue corriendo. En esos frames la app <b>descarta</b> el seguimiento ' +
-          'y vuelve a la interpolación entre tus marcas, y no alcanzan para dar un veredicto. <b>Qué hacer:</b> marca esos puntos a mano en tres frames —de pie, en el punto bajo y en el bloqueo— y vuelve a seguir. ' +
-          'Con dos marcas que lo rodeen, la app puede estimar el punto colgándolo de su segmento; con una sola marca no puede, y lo dice en vez de inventarlo.</div>'
+          'Pasa cuando alrededor del punto no hay nada distinguible —el medio de un muslo de un solo color se parece a sí mismo 5 cm más arriba—. ' +
+          'En esos frames la app <b>descarta</b> el seguimiento y vuelve a la interpolación entre tus marcas, y no alcanzan para dar un veredicto. ' +
+          '<b>Qué hacer:</b> marca esos puntos a mano en tres frames —de pie, en el punto bajo y en el bloqueo— y vuelve a seguir.</div>'
         : '<div class="hint">Revisa igual el recorrido sobre el video: ninguna verificación automática reemplaza mirar si el punto quedó donde tiene que estar.</div>'));
+  if (out) $$('button[data-quiebre]', out).forEach(b => {
+    b.onclick = () => { gotoFrame(+b.dataset.quiebre); toast('Frame ' + b.dataset.quiebre + ': marca acá el centro del disco'); };
+  });
   markDirty++; refreshAll();
 }
 async function trackBarYReps() {
@@ -3706,9 +4124,10 @@ async function trackBarYReps() {
   }
 }
 async function trackBar() {
+  const ko = $('#kfOut'); if (ko) ko.innerHTML = '';   // el aviso viejo ya no vale
   if (!plateGeom()) {
     $('#trackOut').innerHTML = '<div class="warnbox">Sin el disco marcado, la barra se sigue comparando el dibujo del disco, y el disco <b>gira</b> mientras sube y baja. ' +
-      'Marca el disco con el recuadro (pestaña Escala) y el seguimiento pasa a usar su borde circular, que no cambia al girar. Igual lo intento así.</div>';
+      'Marca el disco con el recuadro (pestaña Escala): de ahí sale el tamaño del recuadro que se sigue y la escala en centímetros. Igual lo intento así.</div>';
     await new Promise(r => setTimeout(r, 900));
   }
   await trackPoints(['bar'], $('#trackOut'));
@@ -3764,7 +4183,7 @@ async function runPose() {
   let nErr = 0, lastErr = '';
   for (let f = S.inA; f <= S.inB; f++) {
     await seekAsync(f);
-    wctx.drawImage(vid, 0, 0, wcv.width, wcv.height);
+    pintarVideo(wctx, wcv.width, wcv.height);
     let r = null;
     poseTs += Math.max(1, Math.round(1000 / S.fps));
     try { r = poseLM.detectForVideo(wcv, poseTs); }
@@ -3794,6 +4213,115 @@ async function runPose() {
 /* =========================================================================
    EXPORTACIÓN
    ========================================================================= */
+/** Graba el rango con el overlay encima, frame a frame, y lo baja como WebM. */
+let exportando = false;
+async function exportarVideo() {
+  const out = $('#vidOut');
+  const msg = t => { if (out) out.innerHTML = t; };
+  if (!S.hasVideo || exportando) return;
+  if (typeof MediaRecorder === 'undefined') {
+    msg('<div class="errbox">Este navegador no puede grabar video (falta MediaRecorder). Prueba con Chrome.</div>'); return;
+  }
+  if (!canReadPixels()) {
+    msg('<div class="errbox">El navegador no deja leer los píxeles del video en este contexto, así que no se puede componer la grabación. ' +
+        'Suele pasar al abrir el archivo con doble clic: prueba con Chrome o sirve la carpeta desde un servidor local.</div>'); return;
+  }
+  exportando = true;
+  const back = S.cur, n = S.inB - S.inA + 1;
+
+  /* El grabador le pone la marca de tiempo a cada frame con el reloj real. Componer
+     un frame cuesta un seek —bastante más que 1/fps—, así que grabar mientras se
+     compone da un video en cámara lenta. Por eso hay dos pasadas: primero se
+     componen todos los frames y se guardan comprimidos, y después se reproducen
+     contra el reloj, al ritmo que les toca. El resultado va a velocidad normal
+     sí o sí, y no depende de que la pestaña esté adelante.                      */
+  const lado = Math.max(S.vw, S.vh);
+  const techo = n > 400 ? 854 : n > 200 ? 1080 : 1280;
+  const esc = lado > techo ? techo / lado : 1;
+  const W = Math.round(S.vw * esc / 2) * 2, H = Math.round(S.vh * esc / 2) * 2;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d', { alpha:false });
+  const CUPO = 260e6;
+  const jpgs = [];
+  let bytes = 0, q = 0.88;
+
+  try {
+    // ---------------------------------------------------------- 1. componer
+    for (let f = S.inA; f <= S.inB; f++) {
+      await seekAsync(f);
+      x.drawImage(cv, 0, 0, W, H);
+      x.drawImage(ov, 0, 0, W, H);
+      const b = await new Promise(r => c.toBlob(r, 'image/jpeg', q));
+      if (!b) throw new Error('el navegador no pudo comprimir el frame ' + f);
+      jpgs.push(b); bytes += b.size;
+      if (bytes > CUPO) { msg('<div class="warnbox">El rango es demasiado largo para exportarlo entero. ' +
+        'Recorta el rango a la serie y vuelve a intentarlo.</div>'); throw new Error('rango demasiado largo'); }
+      if ((f - S.inA) % 5 === 0) msg('<div class="infobox">Componiendo… ' +
+        fmt(100 * (f - S.inA + 1) / n, 0) + ' % (' + fmt(bytes / 1048576, 0) + ' MB)</div>');
+    }
+
+    // ---------------------------------------------------------- 2. grabar al ritmo real
+    let mime = 'video/webm;codecs=vp8';
+    if (!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm';
+    let stream, wr = null, track = null;
+    if (typeof MediaStreamTrackGenerator !== 'undefined') {
+      const gen = new MediaStreamTrackGenerator({ kind:'video' });
+      wr = gen.writable.getWriter();
+      stream = new MediaStream([gen]);
+    } else {
+      stream = c.captureStream(0);
+      track = stream.getVideoTracks()[0];
+    }
+    const rec = new MediaRecorder(stream, { mimeType:mime, videoBitsPerSecond:8000000 });
+    const chunks = [];
+    rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    const cerrado = new Promise(r => { rec.onstop = () => r(new Blob(chunks, { type:'video/webm' })); });
+
+    const dt = 1000 / Math.max(1, S.fps);
+    const pend = new Array(jpgs.length).fill(null);
+    const pedir = k => { if (k < jpgs.length && !pend[k]) pend[k] = createImageBitmap(jpgs[k]); };
+    for (let k = 0; k < 8; k++) pedir(k);
+
+    msg('<div class="infobox">Grabando…</div>');
+    rec.start();
+    const t0 = performance.now();
+    let escritos = 0;
+    for (let k = 0; k < jpgs.length; k++) {
+      pedir(k); pedir(k + 8);
+      const bm = await pend[k]; pend[k] = null;
+      // setTimeout y no requestAnimationFrame: rAF se frena con la pestaña atrás
+      const espera = (t0 + k * dt) - performance.now();
+      if (espera > 1) await new Promise(r => setTimeout(r, espera));
+      x.drawImage(bm, 0, 0, W, H);
+      if (bm.close) bm.close();
+      if (wr) {
+        const vf = new VideoFrame(c, { timestamp:Math.round(k * dt * 1000), duration:Math.round(dt * 1000) });
+        await wr.write(vf); vf.close();
+      } else track.requestFrame();
+      escritos++;
+      if (k % 10 === 0) msg('<div class="infobox">Grabando… ' + fmt(100 * (k + 1) / jpgs.length, 0) + ' %</div>');
+    }
+    await new Promise(r => setTimeout(r, Math.max(120, dt * 2)));
+    rec.stop();
+    const blob = await cerrado;
+    try { if (wr) await wr.close(); } catch (e) {}
+    const real = (performance.now() - t0) / 1000, ideal = jpgs.length / Math.max(1, S.fps);
+    const lento = real > ideal * 1.25;
+    const url = URL.createObjectURL(blob);
+    dl('ipf-' + S.lift + '-recorrido.webm', url);
+    msg('<div class="' + (lento ? 'warnbox' : 'okbox') + '">Listo: ' + fmt(blob.size / 1048576, 1) + ' MB, ' +
+        escritos + ' frames, ' + W + '×' + H + ', ' + fmt(ideal, 1) + ' s' +
+        (lento ? ' — la grabación tardó ' + fmt(real, 1) + ' s, así que puede haber quedado algo más lenta de lo normal.' : ' a velocidad normal.') +
+        '<br>Si la descarga no arrancó sola, <a href="' + url + '" download="ipf-recorrido.webm" style="color:#9ff0bd">guárdalo desde acá</a>.</div>');
+  } catch (e) {
+    if (out && !/demasiado largo/.test((e && e.message) || ''))
+      msg('<div class="errbox">La exportación se cortó: ' + ((e && e.message) || 'error') + '</div>');
+  }
+  jpgs.length = 0;
+  exportando = false;
+  await seekAsync(back);
+}
+
 function composePNG() {
   const A = S.A;
   const bh = Math.round(S.vh * 0.075) + 18;
@@ -3838,7 +4366,8 @@ function toJSON() {
     keyFrames:S.keyFrames, manual:S.manual,
     barPath:(A.bar ? A.bar.pts.filter(Boolean).map(p => ({ t:p.t, x:p.x, y:p.y, src:p.src })) : []),
     reps:(S.reps || []).map(r => ({ n:r.n, top0:r.top0, bottom:r.bottom, top1:r.top1, romCm:r.romCm, romU:r.romU,
-                                    durS:r.durS, vMeanMs:r.vMean, vMeanU:r.vU, vPeakMs:r.vPeak, eccS:r.eccS })),
+                                    durS:r.durS, vMeanMs:r.vMean, vMeanU:r.vU, vPeakMs:r.vPeak,
+                                    eccS:r.eccS, vEccMs:r.vEcc, vEccPeakMs:r.vEccPeak })),
     measurements:A.meas || [], angles:A.angles || [], phases:A.phases || [],
     faults:(A.items || []).map(i => ({ code:i.code, label:i.label, rule:i.rule, type:i.type, status:i.status, value:i.value, uncertainty:i.unc, evidenceFrame:i.frame, detail:i.detail })),
     verdict:A.verdict || 'inconclusive', reason:A.reason || ''
@@ -3882,9 +4411,10 @@ function renderSummary() {
   A.meas.forEach(m => { t += '· ' + m.n + ': ' + (m.v === null || m.v === undefined ? '—' : fmt(m.v, 1) + ' ' + m.unit + (m.u === null || m.u === undefined ? '' : ' ± ' + fmt(m.u, 1))) + '\n'; });
   if (S.reps && S.reps.length) {
     t += '\nREPETICIONES\n';
-    t += 'rep  vel(m/s)  pico  dur(s)  ROM(cm)\n';
+    t += 'rep  baja(m/s)  sube(m/s)  pico  dur(s)  ROM(cm)\n';
     S.reps.forEach(r => {
-      t += String(r.n).padEnd(5) + fmt(r.vMean, 3).padEnd(10) + fmt(r.vPeak, 2).padEnd(6) + fmt(r.durS, 2).padEnd(8) + fmt(r.romCm, 1) + '\n';
+      t += String(r.n).padEnd(5) + fmt(r.vEcc, 3).padEnd(12) + fmt(r.vMean, 3).padEnd(11) +
+           fmt(r.vPeak, 2).padEnd(6) + fmt(r.durS, 2).padEnd(8) + fmt(r.romCm, 1) + '\n';
     });
     const vs = S.reps.map(r => r.vMean).filter(v => v !== null && isFinite(v));
     if (vs.length > 1) t += 'Pérdida de velocidad primera→última: ' + fmt((vs[0] - vs[vs.length - 1]) / vs[0] * 100, 1) + ' %\n';
@@ -3921,6 +4451,8 @@ function init() {
   prefLoad(); syncControls(); renderPtList(); renderLines(); renderCal(); renderPlate(); renderVerdict();
 
   // carga de video
+  $('#bRotL').onclick = () => rotarVideo(270);
+  $('#bRotR').onclick = () => rotarVideo(90);
   $('#bPick').onclick = () => $('#fVideo').click();
   $('#drop').onclick = () => $('#fVideo').click();
   $('#fVideo').onchange = e => loadVideo(e.target.files[0]);
@@ -3937,6 +4469,30 @@ function init() {
   $('#bNext').onclick = () => gotoFrame(S.cur + 1);
   $('#bPrev10').onclick = () => gotoFrame(S.cur - 10);
   $('#bNext10').onclick = () => gotoFrame(S.cur + 10);
+  // Ver sólo el recorrido de la barra: apaga todo lo demás de un toque, y lo devuelve.
+  let capasPrevias = null;
+  const ALTOS = [['40dvh', '⅖'], ['52dvh', '½'], ['68dvh', '⅔']];
+  const idxAlto = () => (S.cfg.altoStage === undefined || S.cfg.altoStage === null) ? 1 : S.cfg.altoStage;
+  const aplicarAlto = () => {
+    const a = ALTOS[idxAlto()] || ALTOS[1];
+    document.querySelector('.wrap').style.setProperty('--stageH', a[0]);
+    $('#bAlto').textContent = 'Video ' + a[1];
+    setTimeout(fitCanvas, 60);
+  };
+  $('#bAlto').onclick = () => { S.cfg.altoStage = (idxAlto() + 1) % ALTOS.length; aplicarAlto(); prefSave(); };
+  aplicarAlto();
+  $('#bSoloBarra').onclick = () => {
+    const b = $('#bSoloBarra');
+    if (capasPrevias) {
+      Object.assign(S.layers, capasPrevias); capasPrevias = null; b.classList.remove('on');
+    } else {
+      capasPrevias = Object.assign({}, S.layers);
+      S.layers.path = true;
+      ['skel','ang','cotas','vref','depth'].forEach(k => S.layers[k] = false);
+      b.classList.add('on');
+    }
+    renderToggles(); prefSave(); drawOverlay();
+  };
 
   // pestañas
   $$('#tabs button').forEach(b => b.onclick = () => {
@@ -3953,8 +4509,15 @@ function init() {
   $('#selSide').onchange = e => { S.side = e.target.value; prefSave(); refreshAll(); };
   $('#selFacing').onchange = e => { S.facing = e.target.value; prefSave(); refreshAll(); };
   $('#inFps').onchange = e => {
+    // Al corregir los fps cambia la cantidad de frames. Si el rango terminaba en el
+    // último frame, tiene que seguir terminando ahí: si no, el análisis se queda
+    // callado con medio video afuera, que es un error difícil de notar.
+    const eraTodo = S.inB >= S.nFrames - 1;
     S.fps = clamp(parseFloat(e.target.value) || 30, 1, 240);
-    S.nFrames = nFrames(); S.inB = Math.min(S.inB, S.nFrames - 1); vinfo(); refreshAll();
+    S.nFrames = nFrames();
+    S.inB = eraTodo ? S.nFrames - 1 : Math.min(S.inB, S.nFrames - 1);
+    S.inA = Math.min(S.inA, Math.max(0, S.inB - 1));
+    vinfo(); refreshAll();
   };
   $('#inYaw').oninput = e => { S.cfg.yawDeg = +e.target.value; $('#yawVal').textContent = S.cfg.yawDeg + '°'; prefSave(); refreshAll(); };
   $('#inCamH').onchange = e => { S.cfg.camHcm = Math.max(0, +e.target.value || 0); prefSave(); refreshAll(); };
@@ -3990,7 +4553,13 @@ function init() {
   $('#bSetA').onclick = () => { S.inA = Math.min(S.cur, S.inB - 1); S.reps = []; refreshAll(); };
   $('#bSetB').onclick = () => { S.inB = Math.max(S.cur, S.inA + 1); S.reps = []; refreshAll(); };
   $('#bRangeAll').onclick = () => { S.inA = 0; S.inB = S.nFrames - 1; S.reps = []; refreshAll(); };
-  $('#bAutoKF').onclick = () => { pushU(); if (autoKeyFrames()) { toast('Frames clave propuestos'); } refreshAll(); };
+  $('#bAutoKF').onclick = () => {
+    pushU();
+    const r = autoKeyFrames();
+    kfMensaje(r);
+    toast(r.ok ? 'Frames clave propuestos' : 'No se pudo proponer: mira el aviso');
+    refreshAll();
+  };
   $('#bTrack').onclick = trackBarYReps;
   $('#bTrackClear').onclick = () => { delete S.tracked.bar; $('#trackOut').textContent = ''; refreshAll(); };
   $('#bTrackAll').onclick = trackAll;
@@ -4076,6 +4645,7 @@ function init() {
     $('#modal').classList.add('on');
   };
   $('#modal').onclick = () => $('#modal').classList.remove('on');
+  $('#bVid').onclick = exportarVideo;
   $('#bJson').onclick = () => dl('ipf-' + S.lift + '.json', URL.createObjectURL(new Blob([JSON.stringify(toJSON(), null, 2)], { type:'application/json' })));
   $('#bJsonCopy').onclick = () => copyTxt(JSON.stringify(toJSON(), null, 2), 'JSON');
   $('#fJson').onchange = async e => {
@@ -4112,7 +4682,7 @@ function playLoop() {
   if (vid.paused) { updateTransport(); return; }
   S.cur = clamp(Math.round(vid.currentTime * S.fps), 0, S.nFrames - 1);
   if (S.cur >= S.inB) { vid.pause(); gotoFrame(S.inB); updateTransport(); return; }
-  try { ctx.drawImage(vid, 0, 0, cv.width, cv.height); } catch (e) {}
+  try { pintarVideo(ctx, cv.width, cv.height); } catch (e) {}
   drawOverlay(); drawTimeline(); updateTransport();
   requestAnimationFrame(playLoop);
 }
