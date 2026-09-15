@@ -38,7 +38,9 @@ code{background:var(--bg3);padding:1px 5px;border-radius:5px;font-size:12px}
 .v-bad{background:linear-gradient(180deg,#7f1d1d,#4a1414);border-color:var(--bad)}
 .v-inc{background:linear-gradient(180deg,#78350f,#4a3308);border-color:var(--warn)}
 .v-none{background:var(--bg2);border-color:var(--line2)}
-.disc{font-size:11.5px;color:var(--tx2);padding:5px 12px;background:var(--bg2);border-bottom:1px solid var(--line)}
+.verdict{position:relative}
+.verdict .ver{position:absolute;top:5px;right:9px;font-size:9.5px;font-weight:700;letter-spacing:.04em;
+  color:rgba(255,255,255,.72);background:rgba(0,0,0,.25);border-radius:999px;padding:1px 6px;line-height:1.5}
 
 .main{display:flex;flex-direction:column;flex:1;min-height:0}
 .stage{background:#000;position:relative}
@@ -178,7 +180,14 @@ td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
   html,body{height:100%;overflow:hidden}
   .wrap{height:100vh;height:100dvh;overflow:hidden}
   .top{position:static;flex:0 0 auto}
-  .disc{font-size:10.5px;line-height:1.35;padding:4px 10px}
+  /* El encabezado es lo único que no se puede desplazar: cada píxel que ocupa
+     se lo saca al video y al menú. Una línea de título y una de motivo, y el
+     motivo entero aparece al tocarlo. */
+  .verdict{padding:5px 10px 6px}
+  .verdict .vTitle{font-size:14.5px}
+  .verdict .vSub{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .verdict.abierto .vSub{white-space:normal}
+  .verdict .ver{top:4px;right:7px;font-size:9px}
   .main{flex:1;min-height:0;overflow:hidden}
   .stage{flex:0 0 auto;display:flex;flex-direction:column;min-height:0;
     height:var(--stageH,52dvh);max-height:78dvh}
@@ -192,9 +201,6 @@ td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
   .tlMark{height:28px}
   .tlHandle{top:5px;height:26px}
   .tlPlay{height:32px}
-  .verdict{padding:7px 10px}
-  .verdict .vTitle{font-size:15.5px}
-  .verdict .vSub{font-size:12px}
   .solo-ancho{display:none}
   .side{flex:1;min-height:0;overflow:hidden}
   .panels{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
@@ -216,11 +222,11 @@ td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 <body>
 <div class="wrap">
   <header class="top">
-    <div class="verdict v-none" id="verdict">
+    <div class="verdict v-none" id="verdict" title="Tocar para ver el motivo completo">
+      <span class="ver" id="verTag">v17</span>
       <span class="vTitle" id="vTitle">SIN ANALIZAR</span>
       <span class="vSub" id="vSub">Carga un video y marca los puntos para obtener un veredicto.</span>
     </div>
-    <div class="disc"><b id="verTag" style="color:#7dd3fc">v15</b> · <span class="solo-ancho">Herramienta de entrenamiento. </span>No sustituye el criterio de un árbitro IPF. · El video se procesa 100% en tu dispositivo<span class="solo-ancho"> y no se sube a ningún lado</span>.</div>
   </header>
 
   <div class="main">
@@ -231,7 +237,7 @@ td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
         <canvas id="lens" width="180" height="180" hidden></canvas>
         <div class="hud" id="hud"></div>
         <div class="boxbar" id="boxBar">
-          <span class="msg" id="boxMsg">Arrastra las líneas verdes hasta que encierren el disco más grande.</span>
+          <span class="msg" id="boxMsg">Arrastra las líneas o las esquinas hasta encerrar el disco, y el <b>punto del medio</b> para mover el recuadro entero.</span>
           <button class="btn danger" id="boxNo">¡NO!</button>
           <button class="btn" id="boxOk" style="background:#14532d;border-color:#22c55e;color:#c9f7d9">¡BIEN!</button>
         </div>
@@ -269,7 +275,7 @@ td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
         <button data-t="escala">Escala</button>
         <button data-t="frames">Frames clave</button>
         <button data-t="puntos">Puntos</button>
-        <button data-t="reps">Reps</button>
+        <button data-t="reps">Parámetros</button>
         <button data-t="reglas">Reglas</button>
         <button data-t="medidas">Medidas</button>
         <button data-t="graficos">Gráficos</button>
@@ -371,7 +377,7 @@ td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
               <button class="btn sm" id="bAutoNext">Avance auto: ON</button>
             </div>
             <label class="fld">Zoom
-              <input type="range" id="inZoom" min="1" max="6" step="0.1" value="1">
+              <input type="range" id="inZoom" min="1" max="8" step="0.1" value="1">
             </label>
             <div class="hint kbd">Escritorio: <b>←</b>/<b>→</b> frame · <b>Shift</b>+flecha 10 frames · <b>Espacio</b> play · <b>1..9</b> punto · <b>Z</b> deshacer · <b>Y</b> rehacer</div>
           </div>
@@ -540,6 +546,10 @@ td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
         <!-- ============ REPS ============ -->
         <div class="panel" data-p="reps">
           <div class="card">
+            <h2>Resumen de la serie</h2>
+            <div id="paramsOut" class="hint">Sin repeticiones detectadas todavía.</div>
+          </div>
+          <div class="card">
             <h2>Repeticiones y velocidad</h2>
             <div class="hint">Necesita la barra seguida en el rango y la escala calibrada. Se detecta cada repetición por los máximos y mínimos de la altura de la barra, y se mide la fase concéntrica de cada una.</div>
             <button class="btn pri wide" id="bReps">Detectar repeticiones</button>
@@ -619,6 +629,12 @@ td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
           </div>
 
           <div class="card">
+            <h2>Informe en PDF</h2>
+            <div class="hint">Una hoja con el veredicto, el frame anotado, los parámetros de la serie, los gráficos y el estado de cada criterio. Se arma en el teléfono, sin subir nada.</div>
+            <button class="btn pri wide" id="bPdf">Descargar informe PDF</button>
+            <div id="pdfOut" class="hint"></div>
+          </div>
+          <div class="card">
             <h2>Análisis (JSON)</h2>
             <div class="row">
               <button class="btn" id="bJson">Descargar JSON</button>
@@ -635,6 +651,18 @@ td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 
         <!-- ============ AYUDA ============ -->
         <div class="panel" data-p="ayuda">
+          <div class="card">
+            <h2>Qué es esto y qué no</h2>
+            <p><b>Herramienta de entrenamiento. No sustituye el criterio de un árbitro IPF.</b> Un árbitro ve cosas
+            que un video no muestra, y decide en el momento; esto mide lo que se puede medir en la imagen y dice
+            cuánto error tiene cada medida.</p>
+            <p><b>El video se procesa 100 % en tu dispositivo y no se sube a ningún lado.</b> No hay servidor: el
+            archivo se abre con <code>createObjectURL</code> y todo el cálculo pasa en el navegador. Lo que exportes
+            —imagen, video, JSON, informe— sale de ahí y lo compartes tú si quieres.</p>
+            <p>Todo veredicto tiene tres estados, nunca dos: <b>VÁLIDO</b>, <b>NO VÁLIDO</b> y <b>NO CONCLUYENTE</b>.
+            Si el margen medido es menor que la banda de incertidumbre, el resultado es no concluyente a propósito.</p>
+            <p class="hint" id="verAyuda">Versión de la app: <b>v17</b>.</p>
+          </div>
           <div class="card">
             <h2>Cómo filmar</h2>
             <ul>
@@ -1006,15 +1034,12 @@ function fitCanvas() {
   if (!S.hasVideo || fitting) return;
   fitting = true;
   const w = $('#canvasWrap');
-  if (window.innerWidth < 900) {
-    // celular: la altura la manda el aspecto del video, hasta 58% de la pantalla
-    const want = Math.round(Math.min(w.clientWidth * S.vh / S.vw, window.innerHeight * 0.58));
-    if (Math.abs(parseFloat(w.style.height || 0) - want) > 1) w.style.height = want + 'px';
-  } else if (w.style.height) w.style.height = '';
+  if (w.style.height) w.style.height = '';   // la altura la reparte el CSS, no esto
   const bw = w.clientWidth, bh = Math.max(180, w.clientHeight);
   const f = Math.min(bw / S.vw, bh / S.vh);
   const dw = S.vw * f, dh = S.vh * f;
   const ox = (bw - dw) / 2, oy = (bh - dh) / 2;
+  S._ox = ox; S._oy = oy;        // el pellizco los necesita para no correr la imagen
   [cv, ov].forEach(c => {
     c.style.width = dw + 'px'; c.style.height = dh + 'px';
     c.style.transform = 'translate(' + (ox + S.pan.x) + 'px,' + (oy + S.pan.y) + 'px) scale(' + S.zoom + ')';
@@ -1216,8 +1241,62 @@ function hasAnyPoint(k) { return markedIdx(k).length > 0 || Object.keys(S.auto).
 
 /* --------------------------- interacción del canvas ------------------------- */
 let drag = null, panDrag = null;
+
+/* ---- pellizco de dos dedos -------------------------------------------------
+   En el teléfono hace falta acercar para marcar bien un punto. Lo importante es
+   que el punto que está entre los dedos se quede donde está: si se escala sin
+   más, lo que se quiere mirar se va de la pantalla al segundo pellizco.      */
+const punteros = new Map();
+let pinch = null, tras2Dedos = false;
+function wrapXY(e) {
+  const r = $('#canvasWrap').getBoundingClientRect();
+  return { x:e.clientX - r.left, y:e.clientY - r.top };
+}
+function pinchIniciar() {
+  const a = [];
+  punteros.forEach(v => a.push(v));
+  const p0 = a[0], p1 = a[1];
+  pinch = {
+    d0:Math.hypot(p1.x - p0.x, p1.y - p0.y) || 1,
+    m0:{ x:(p0.x + p1.x) / 2, y:(p0.y + p1.y) / 2 },
+    z0:S.zoom, px:S.pan.x, py:S.pan.y, ox:S._ox || 0, oy:S._oy || 0
+  };
+}
+function pinchMover() {
+  if (!pinch) return;
+  const a = [];
+  punteros.forEach(v => a.push(v));
+  if (a.length < 2) return;
+  const p0 = a[0], p1 = a[1];
+  const d = Math.hypot(p1.x - p0.x, p1.y - p0.y) || 1;
+  const m = { x:(p0.x + p1.x) / 2, y:(p0.y + p1.y) / 2 };
+  const z = clamp(pinch.z0 * (d / pinch.d0), 1, 8);
+  // punto del lienzo que estaba bajo el centro de los dedos, en coordenadas del lienzo
+  const ux = (pinch.m0.x - pinch.ox - pinch.px) / pinch.z0;
+  const uy = (pinch.m0.y - pinch.oy - pinch.py) / pinch.z0;
+  if (z <= 1.001) { S.zoom = 1; S.pan = { x:0, y:0 }; }
+  else {
+    S.zoom = z;
+    S.pan = { x:m.x - pinch.ox - ux * z, y:m.y - pinch.oy - uy * z };
+  }
+  const sl = $('#inZoom'); if (sl) sl.value = S.zoom;
+  fitCanvas();
+  const hz = $('#zoomVal'); if (hz) hz.textContent = fmt(S.zoom, 1) + '×';
+}
+ov.addEventListener('pointerup', e => { punteros.delete(e.pointerId); if (punteros.size < 2) pinch = null; if (!punteros.size) tras2Dedos = false; });
+ov.addEventListener('pointercancel', e => { punteros.delete(e.pointerId); if (punteros.size < 2) pinch = null; if (!punteros.size) tras2Dedos = false; });
 ov.addEventListener('pointerdown', e => {
   if (!S.hasVideo) return;
+  punteros.set(e.pointerId, wrapXY(e));
+  if (punteros.size >= 2) {
+    // el primer dedo pudo haber colocado un punto al apoyarse: se deshace
+    if (drag && drag.kind === 'pt' && drag.placed) undo();
+    drag = null; panDrag = null; hideLens();
+    tras2Dedos = true;
+    if (punteros.size === 2) pinchIniciar();
+    return;
+  }
+  if (tras2Dedos) return;                       // quedan dedos del pellizco anterior
   try { ov.setPointerCapture(e.pointerId); } catch (err) {}
   const p = toVideo(e);
   if (S.tool === 'pan') { panDrag = { x:e.clientX, y:e.clientY, px:S.pan.x, py:S.pan.y }; return; }
@@ -1230,10 +1309,27 @@ ov.addEventListener('pointerdown', e => {
     drawOverlay(); renderCal(); return;
   }
   if (S.mode === 'box' && S.box) {
-    const B = S.box, tol = 22 * pxPerScreenPx() / S.zoom;
-    const d = { x0:Math.abs(p.x - B.x0), x1:Math.abs(p.x - B.x1), y0:Math.abs(p.y - B.y0), y1:Math.abs(p.y - B.y1) };
-    let cual = null, mn = tol;
-    for (const k in d) if (d[k] < mn) { mn = d[k]; cual = k; }
+    const B = S.box;
+    const chico = Math.min(B.x1 - B.x0, B.y1 - B.y0);
+    // La tolerancia es del tamaño de un dedo, pero acotada al recuadro: si no,
+    // en un recuadro chico todas las esquinas caen dentro de la tolerancia de
+    // todas las demás y agarrar una de abajo arrastraba la de arriba.
+    const tol = Math.min(22 * pxPerScreenPx() / S.zoom, chico * 0.35);
+    const cx = (B.x0 + B.x1) / 2, cy = (B.y0 + B.y1) / 2;
+    let cual = null;
+    if (dist({ x:cx, y:cy }, p) <= gripR(B)) cual = 'mover';   // punto del medio: mover todo
+    if (!cual) {                                               // esquina más cercana
+      let mn = tol;
+      [['x0','y0'],['x1','y0'],['x0','y1'],['x1','y1']].forEach(q => {
+        const d = Math.max(Math.abs(p.x - B[q[0]]), Math.abs(p.y - B[q[1]]));
+        if (d < mn) { mn = d; cual = q[0] + q[1]; }
+      });
+    }
+    if (!cual) {                                               // lado más cercano
+      const d = { x0:Math.abs(p.x - B.x0), x1:Math.abs(p.x - B.x1), y0:Math.abs(p.y - B.y0), y1:Math.abs(p.y - B.y1) };
+      let mn = tol;
+      for (const k in d) if (d[k] < mn) { mn = d[k]; cual = k; }
+    }
     if (!cual && p.x > B.x0 && p.x < B.x1 && p.y > B.y0 && p.y < B.y1) cual = 'mover';
     if (cual) { drag = { kind:'box', which:cual, ox:p.x, oy:p.y, snap:Object.assign({}, B) }; }
     drawOverlay(); return;
@@ -1282,6 +1378,9 @@ ov.addEventListener('pointerdown', e => {
   toast('Elige un punto en la pestaña Puntos, o toca más cerca de uno ya marcado para moverlo');
 });
 ov.addEventListener('pointermove', e => {
+  if (punteros.has(e.pointerId)) punteros.set(e.pointerId, wrapXY(e));
+  if (punteros.size >= 2) { pinchMover(); return; }
+  if (tras2Dedos) return;
   if (panDrag) {
     S.pan.x = panDrag.px + (e.clientX - panDrag.x);
     S.pan.y = panDrag.py + (e.clientY - panDrag.y);
@@ -1302,6 +1401,11 @@ ov.addEventListener('pointermove', e => {
     if (drag.which === 'mover') {
       const dx = p.x - drag.ox, dy = p.y - drag.oy;
       B.x0 = o.x0 + dx; B.x1 = o.x1 + dx; B.y0 = o.y0 + dy; B.y1 = o.y1 + dy;
+    } else if (drag.which.length === 4) {          // esquina: x0y0, x1y0, x0y1, x1y1
+      const kx = drag.which.slice(0, 2), ky = drag.which.slice(2);
+      B[kx] = p.x; B[ky] = p.y;
+      if (B.x1 - B.x0 < 12) { if (kx === 'x0') B.x0 = B.x1 - 12; else B.x1 = B.x0 + 12; }
+      if (B.y1 - B.y0 < 12) { if (ky === 'y0') B.y0 = B.y1 - 12; else B.y1 = B.y0 + 12; }
     } else {
       B[drag.which] = drag.which[0] === 'x' ? p.x : p.y;
       if (B.x1 - B.x0 < 12) { if (drag.which === 'x0') B.x0 = B.x1 - 12; else B.x1 = B.x0 + 12; }
@@ -1991,8 +2095,9 @@ function analyze() {
     A.items.push(it);
 
     /* S2 inicio y final erguidos */
-    const s2 = mk('S2', 'Rodillas bloqueadas y torso erguido antes y después', 'AUTO',
+    const s2 = mk('S2', 'Rodillas bloqueadas y torso erguido antes y después', 'ASISTIDO',
       'El levantamiento empieza y termina erguido, con las rodillas bloqueadas.');
+    s2.confirmable = true;
     const chk = [];
     let s2ok = true, s2any = false, s2inc = false;
     [['setup','inicio'],['lockout','final']].forEach(pair => {
@@ -2006,7 +2111,8 @@ function analyze() {
       if (a.knee < 170) s2ok = false;
     });
     s2.detail = chk.join(' · ') || 'Faltan puntos o frames clave.';
-    s2.status = !s2any ? 'inconclusive' : (!s2ok ? 'fail' : 'ok');
+    s2.status = !s2any ? 'inconclusive' : (!s2ok ? 'manual' : 'ok');
+    if (!s2ok && s2any) s2.detail += ' El ángulo medido no llega al umbral, pero un bloqueo real se ve mal de perfil: la ropa tapa la rótula y el punto de la cadera se corre unos píxeles. Por eso no da NO VÁLIDO sola: míralo en el video y confirma abajo.';
     guard(s2, !s2inc);
     A.items.push(s2);
 
@@ -2020,8 +2126,9 @@ function analyze() {
     A.items.push(s3);
 
     /* S4 pies */
-    const s4 = mk('S4', 'Sin desplazamiento de los pies', 'AUTO',
+    const s4 = mk('S4', 'Sin desplazamiento de los pies', 'ASISTIDO',
       'No se puede dar un paso. Sí está permitido el balanceo talón↔metatarso.');
+    s4.confirmable = true;
     const ft = footTravel();
     if (!cal) s4.detail = NOCAL;
     else if (ft.heel === null && ft.toe === null) s4.detail = 'Marca talón y punta del pie en al menos dos frames del rango.';
@@ -2032,6 +2139,7 @@ function analyze() {
       s4.detail = 'Recorrido horizontal: talón ' + fmt(ft.heel, 1) + ' cm, punta ' + fmt(ft.toe, 1) + ' cm.' +
         (ft.pivot ? ' Un extremo se movió y el otro no: parece rotación sobre el pie, no un paso. Verifícalo a simple vista.' : '');
       s4.status = decide(2.0 - worst, u);
+      if (s4.status === 'fail') { s4.status = 'manual'; s4.detail += ' Un paso de verdad se ve; lo que la app mide es el recorrido del talón y de la punta, y eso se mueve también por el balanceo permitido y por el error de marcar el pie. Por eso no da NO VÁLIDO sola: míralo en el video y confirma abajo.'; }
       if (s4.status === 'inconclusive' && u !== null) s4.detail += ' La banda de incertidumbre (±' + fmt(u, 1) + ' cm) es del tamaño del umbral de 2 cm: con esta resolución no se puede afirmar ni descartar el paso.';
       if (ft.pivot && s4.status === 'fail') { s4.status = 'inconclusive'; s4.detail += ' Marcado NO CONCLUYENTE por el patrón de pivote.'; }
       if (!ft.real) { s4.status = 'inconclusive'; s4.detail += ' Los pies están interpolados en casi todos los frames.'; }
@@ -2311,7 +2419,8 @@ function analyze() {
     }
     A.items.push(d2);
 
-    const d3 = mk('D3', 'Rodillas bloqueadas en extensión al finalizar', 'AUTO', 'Las rodillas deben quedar bloqueadas en extensión.');
+    const d3 = mk('D3', 'Rodillas bloqueadas en extensión al finalizar', 'ASISTIDO', 'Las rodillas deben quedar bloqueadas en extensión.');
+    d3.confirmable = true;
     if (K.lockout === null) d3.detail = 'Define el bloqueo.';
     else {
       const a = anglesAt(K.lockout); d3.frame = K.lockout;
@@ -2319,8 +2428,9 @@ function analyze() {
       else {
         const u = angUnc(K.lockout);
         d3.value = a.knee; d3.unc = u;
-        d3.status = a.knee >= 175 + u ? 'ok' : (a.knee < 175 - u ? 'fail' : 'inconclusive');
+        d3.status = a.knee >= 175 + u ? 'ok' : (a.knee < 175 - u ? 'manual' : 'inconclusive');
         d3.detail = 'Ángulo de rodilla: ' + fmt(a.knee, 0) + '° ± ' + fmt(u, 0) + '° (umbral 175°).';
+        if (d3.status === 'manual') d3.detail += ' El ángulo medido no llega al umbral, pero un bloqueo real se ve mal de perfil: la ropa tapa la rótula y el punto de la cadera se corre unos píxeles. Por eso no da NO VÁLIDO sola: míralo en el video y confirma abajo.';
         if (!a._real) { d3.status = 'inconclusive'; d3.detail += ' Puntos interpolados.'; }
       }
     }
@@ -2364,7 +2474,8 @@ function analyze() {
     }
     A.items.push(d5);
 
-    const d6 = mk('D6', 'Sin desplazamiento de los pies', 'AUTO', 'No se puede dar un paso.');
+    const d6 = mk('D6', 'Sin desplazamiento de los pies', 'ASISTIDO', 'No se puede dar un paso.');
+    d6.confirmable = true;
     const ft2 = footTravel();
     if (!cal) d6.detail = NOCAL;
     else if (ft2.heel === null && ft2.toe === null) d6.detail = 'Marca talón y punta.';
@@ -2373,6 +2484,7 @@ function analyze() {
       const u = unc(worst, 2, 0);
       d6.value = worst; d6.unc = u;
       d6.status = decide(2.0 - worst, u);
+      if (d6.status === 'fail') { d6.status = 'manual'; d6.detail = (d6.detail || '') + ' Un paso de verdad se ve; lo que la app mide es el recorrido del talón y de la punta, y eso se mueve también por el balanceo permitido y por el error de marcar el pie. Por eso no da NO VÁLIDO sola: míralo en el video y confirma abajo.'; }
       if (d6.status === 'inconclusive' && u !== null) d6.detail = 'La banda de incertidumbre (±' + fmt(u, 1) + ' cm) es del tamaño del umbral de 2 cm. ';
       d6.detail = (d6.detail || '') + 'Recorrido horizontal: talón ' + fmt(ft2.heel, 1) + ' cm, punta ' + fmt(ft2.toe, 1) + ' cm.' + (ft2.pivot ? ' Patrón de pivote.' : '');
       if (!ft2.real) { d6.status = 'inconclusive'; d6.detail += ' Puntos interpolados.'; }
@@ -2401,9 +2513,11 @@ function analyze() {
 
   /* ---------- estado manual del usuario ---------- */
   A.items.forEach(it => {
-    if (it.type !== 'MANUAL') return;
     const m = S.manual[it.code];
-    it.status = m === 'ok' ? 'ok' : (m === 'fail' ? 'fail' : 'manual');
+    if (it.type === 'MANUAL') { it.status = m === 'ok' ? 'ok' : (m === 'fail' ? 'fail' : 'manual'); return; }
+    // Los criterios confirmables (pies, bloqueo de rodilla) se miden igual, pero
+    // lo que mandes tú manda: la medida sola no alcanza para invalidar.
+    if (it.confirmable && (m === 'ok' || m === 'fail')) it.status = m;
   });
 
   /* ---------- veredicto ---------- */
@@ -2900,9 +3014,18 @@ function drawOverlay() {
     c.beginPath(); c.ellipse((B.x0 + B.x1) / 2, (B.y0 + B.y1) / 2, (B.x1 - B.x0) / 2, (B.y1 - B.y0) / 2, 0, 0, 7); c.stroke();
     c.fillStyle = '#22ff44';
     const hs = Math.max(5, LW() * 3);
-    [[B.x0, (B.y0 + B.y1) / 2], [B.x1, (B.y0 + B.y1) / 2], [(B.x0 + B.x1) / 2, B.y0], [(B.x0 + B.x1) / 2, B.y1]].forEach(q => {
+    [[B.x0, (B.y0 + B.y1) / 2], [B.x1, (B.y0 + B.y1) / 2], [(B.x0 + B.x1) / 2, B.y0], [(B.x0 + B.x1) / 2, B.y1],
+     [B.x0, B.y0], [B.x1, B.y0], [B.x0, B.y1], [B.x1, B.y1]].forEach(q => {
       c.fillRect(q[0] - hs / 2, q[1] - hs / 2, hs, hs);
     });
+    // punto de agarre: se toca y se arrastra el recuadro entero sin deformarlo
+    const gx = (B.x0 + B.x1) / 2, gy = (B.y0 + B.y1) / 2, gr = gripR(B);
+    c.fillStyle = 'rgba(34,255,68,.25)'; c.strokeStyle = '#22ff44'; c.lineWidth = Math.max(2, LW() * 1.1);
+    c.beginPath(); c.arc(gx, gy, gr, 0, 7); c.fill(); c.stroke();
+    c.beginPath();
+    c.moveTo(gx - gr * 0.55, gy); c.lineTo(gx + gr * 0.55, gy);
+    c.moveTo(gx, gy - gr * 0.55); c.lineTo(gx, gy + gr * 0.55);
+    c.stroke();
     c.restore();
   }
 
@@ -3097,7 +3220,8 @@ function chartHover(cn) {
 }
 ['#chBarY','#chBarV','#chAng'].forEach(s => { chartClick($(s)); chartHover($(s)); });
 
-function drawCharts() {
+function drawCharts(dest) {
+  const D = dest || { y:$('#chBarY'), v:$('#chBarV'), a:$('#chAng') };
   const A = S.A; if (!A || !A.bar) return;
   const B = A.bar, K = S.keyFrames;
   const marks = [];
@@ -3116,16 +3240,16 @@ function drawCharts() {
     if ((it.code === 'S3' || it.code === 'B5' || it.code === 'D1' || it.code === 'B4') && it.status === 'fail' && it.frame !== null)
       bands.push({ x0:(it.frame - 2) / S.fps, x1:(it.frame + 1) / S.fps, color:'rgba(239,68,68,.35)' });
   });
-  plot($('#chBarY'), [{ data:dataY, color:'#ffffff' }], { marks:marks, bands:bands, unit:'cm', empty:S.calib.pxPerCm ? 'Marca o sigue la barra en el rango' : 'Sin calibrar: no hay altura en cm' });
+  plot(D.y, [{ data:dataY, color:'#ffffff' }], { marks:marks, bands:bands, unit:'cm', empty:S.calib.pxPerCm ? 'Marca o sigue la barra en el rango' : 'Sin calibrar: no hay altura en cm' });
   const pbands = (A.plateaus || []).map(p => ({ x0:p.a / S.fps, x1:p.b / S.fps, color:'rgba(245,158,11,.3)' }));
-  plot($('#chBarV'), [{ data:dataV, color:'#3b82f6' }], { marks:marks, bands:pbands, unit:'cm/s', empty:'Sin datos de velocidad' });
+  plot(D.v, [{ data:dataV, color:'#3b82f6' }], { marks:marks, bands:pbands, unit:'cm/s', empty:'Sin datos de velocidad' });
   const dk = [], dh = [], dt = [];
   const step = Math.max(1, Math.round((S.inB - S.inA) / 120));
   for (let f = S.inA; f <= S.inB; f += step) {
     const a = anglesAt(f);
     dk.push({ x:f / S.fps, y:a.knee }); dh.push({ x:f / S.fps, y:a.hip }); dt.push({ x:f / S.fps, y:a.torso });
   }
-  plot($('#chAng'), [{ data:dk, color:'#22c55e' }, { data:dh, color:'#f59e0b' }, { data:dt, color:'#c084fc' }], { marks:marks, unit:'°', empty:'Marca cadera, rodilla y tobillo' });
+  plot(D.a, [{ data:dk, color:'#22c55e' }, { data:dh, color:'#f59e0b' }, { data:dt, color:'#c084fc' }], { marks:marks, unit:'°', empty:'Marca cadera, rodilla y tobillo' });
 }
 
 /* =========================================================================
@@ -3257,6 +3381,13 @@ function boxStart() {
   S.mode = 'box'; S.armed = null;
   $('#boxBar').classList.add('on');
   renderPtList(); boxInfo(); drawOverlay(); updateTransport();
+}
+/** Radio del punto de agarre del recuadro, en píxeles de video. */
+function gripR(B) {
+  // grande como un dedo, pero nunca tanto como para tapar las esquinas: si el
+  // agarre se come el recuadro entero, no hay forma de cambiarle el tamaño.
+  const chico = Math.min(B.x1 - B.x0, B.y1 - B.y0);
+  return clamp(16 * pxPerScreenPx() / S.zoom, chico * 0.16, chico * 0.40);
 }
 function boxInfo() {
   const B = S.box; if (!B) return;
@@ -3399,7 +3530,7 @@ function renderChecklist() {
       b.onclick = () => { gotoFrame(it.frame); toast('Frame ' + it.frame); };
       body.appendChild(b);
     }
-    if (it.type === 'MANUAL') {
+    if (it.type === 'MANUAL' || it.confirmable) {
       const seg = document.createElement('div'); seg.className = 'seg'; seg.style.marginTop = '8px';
       [['', 'Sin verificar'], ['ok', 'Cumple'], ['fail', 'No cumple']].forEach(o => {
         const b = document.createElement('button');
@@ -3420,11 +3551,73 @@ function renderChecklist() {
   const dot = $('#tabs button[data-t="reglas"]');
   dot.innerHTML = 'Reglas' + ((n.fail || n.inconclusive || n.manual) ? '<span class="dotmark" style="background:' + (n.fail ? 'var(--bad)' : 'var(--warn)') + '"></span>' : '');
 }
+/** Resumen de la serie: promedios, máximos y mínimos de lo que ya está medido
+    por repetición. No agrega información nueva: ordena la que hay.          */
+function paramsGenerales() {
+  const R = (S.reps || []).filter(r => r.vMean !== null && isFinite(r.vMean));
+  if (!R.length) return null;
+  const st = arr => {
+    const a = arr.filter(v => v !== null && v !== undefined && isFinite(v));
+    if (!a.length) return null;
+    return { n:a.length, med:a.reduce((x, y) => x + y, 0) / a.length,
+             max:Math.max.apply(null, a), min:Math.min.apply(null, a) };
+  };
+  const vs = R.map(r => r.vMean);
+  const mejor = Math.max.apply(null, vs), ultima = vs[vs.length - 1], peor = Math.min.apply(null, vs);
+  return {
+    reps:R.length,
+    sub:st(vs), pico:st(R.map(r => r.vPeak)), durS:st(R.map(r => r.durS)),
+    baj:st(R.map(r => r.vEcc)), picoBaj:st(R.map(r => r.vEccPeak)), durB:st(R.map(r => r.eccS)),
+    rom:st(R.map(r => r.romCm)),
+    perd:R.length > 1 ? { primUlt:(vs[0] - ultima) / vs[0] * 100,
+                          mejorUlt:(mejor - ultima) / mejor * 100,
+                          mejorPeor:(mejor - peor) / mejor * 100 } : null,
+    banda:(R[0].vU && R[0].vMean) ? Math.abs(R[0].vU / R[0].vMean) * 100 : null,
+    tTotal:(R[R.length - 1].top1 - R[0].top0) / S.fps
+  };
+}
+/** Las mismas filas que se ven en pantalla, para no escribirlas dos veces. */
+function paramsFilas(P) {
+  if (!P) return [];
+  const f3 = v => v === null || v === undefined ? '—' : fmt(v, 3);
+  const f2 = v => v === null || v === undefined ? '—' : fmt(v, 2);
+  const f1 = v => v === null || v === undefined ? '—' : fmt(v, 1);
+  const fila = (n, st, f, u) => st ? [n, f(st.med) + ' ' + u, f(st.max) + ' ' + u, f(st.min) + ' ' + u] : [n, '—', '—', '—'];
+  const out = [];
+  out.push(['SUBIDA (concéntrica)', '', '', '']);
+  out.push(fila('Velocidad media', P.sub, f3, 'm/s'));
+  out.push(fila('Velocidad pico', P.pico, f2, 'm/s'));
+  out.push(fila('Duración', P.durS, f2, 's'));
+  out.push(fila('Recorrido', P.rom, f1, 'cm'));
+  out.push(['BAJADA (excéntrica)', '', '', '']);
+  out.push(fila('Velocidad media', P.baj, f3, 'm/s'));
+  out.push(fila('Velocidad pico', P.picoBaj, f2, 'm/s'));
+  out.push(fila('Duración', P.durB, f2, 's'));
+  return out;
+}
+function renderParams() {
+  const box = $('#paramsOut'); if (!box) return;
+  const P = paramsGenerales();
+  if (!P) { box.innerHTML = 'Sin repeticiones detectadas todavía. Sigue la barra en el rango y toca “Detectar repeticiones”.'; return; }
+  const filas = paramsFilas(P).map(f => f[1] === ''
+    ? '<tr><th colspan="4" style="padding-top:10px">' + f[0] + '</th></tr>'
+    : '<tr><td>' + f[0] + '</td><td class="num">' + f[1] + '</td><td class="num">' + f[2] + '</td><td class="num">' + f[3] + '</td></tr>').join('');
+  box.innerHTML =
+    '<table><tr><th>Parámetro</th><th class="num">Promedio</th><th class="num">Máximo</th><th class="num">Mínimo</th></tr>' + filas + '</table>' +
+    '<div class="row" style="margin-top:8px"><span class="chip on">' + P.reps + ' repetición(es)</span>' +
+    '<span class="chip">serie de ' + fmt(P.tTotal, 1) + ' s</span>' +
+    (P.perd ? '<span class="chip">pérdida 1ª→última ' + fmt(P.perd.primUlt, 1) + ' %</span>' +
+              '<span class="chip">mejor→última ' + fmt(P.perd.mejorUlt, 1) + ' %</span>' : '') + '</div>' +
+    (P.banda !== null ? '<div class="hint">La banda de cada velocidad es de ±' + fmt(P.banda, 1) +
+      ' %. Una diferencia entre repeticiones menor que eso no se distingue del ruido de medición.</div>' : '') +
+    '<div class="hint">Todo en el plano de la imagen: lo que la barra se acerque o se aleje de la cámara no se ve y no se mide.</div>';
+}
 function renderReps(r) {
   const box = $('#repsOut'), loss = $('#repsLoss');
   if (!box) return;
-  if (r && r.err) { box.innerHTML = '<div class="warnbox">' + r.err + '</div>'; loss.textContent = 'Sin datos todavía.'; return; }
+  if (r && r.err) { box.innerHTML = '<div class="warnbox">' + r.err + '</div>'; loss.textContent = 'Sin datos todavía.'; renderParams(); return; }
   const reps = S.reps;
+  renderParams();
   if (!reps.length) { box.innerHTML = '<div class="hint">Sin repeticiones detectadas todavía.</div>'; return; }
   const B = S.A && S.A.bar ? S.A.bar : barSeries();
   let calSeg = 1;
@@ -3484,6 +3677,11 @@ function renderReps(r) {
       '<div class="hint">Con bandas de ±' + fmt(reps[0].vU / Math.max(1e-6, reps[0].vMean) * 100, 1) + ' % por repetición, una pérdida menor que eso no se distingue de ruido.</div>';
   } else loss.textContent = 'Hace falta más de una repetición.';
 }
+$('#verdict').addEventListener('click', () => {
+  // en el teléfono el motivo va recortado a una línea; un toque lo despliega
+  $('#verdict').classList.toggle('abierto');
+  setTimeout(fitCanvas, 60);
+});
 function renderVerdict() {
   const A = S.A, v = $('#verdict');
   if (!A || A.none) {
@@ -4322,6 +4520,254 @@ async function exportarVideo() {
   await seekAsync(back);
 }
 
+/* =========================================================================
+   INFORME EN PDF
+   Sin librerías: el PDF se escribe a mano. Son cuatro cosas —texto en Helvetica,
+   imágenes JPEG, líneas y la tabla de referencias cruzadas— y así el archivo
+   sigue siendo uno solo y sigue funcionando sin internet.
+   ========================================================================= */
+const PDF_W = 595.28, PDF_H = 841.89, PDF_M = 42;
+const PDF_MAPA = { '\u2013':'-', '\u2014':'-', '\u2018':"'", '\u2019':"'", '\u201c':'"', '\u201d':'"',
+                   '\u2026':'...', '\u2192':'->', '\u2194':'<->', '\u00d7':'x', '\u2265':'>=', '\u2264':'<=',
+                   '\u25bc':'v', '\u25b2':'^', '\u2705':'', '\u00b7':'\u00b7' };
+function pdfTexto(v) {
+  let out = '';
+  const str = String(v === null || v === undefined ? '' : v);
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i], r = PDF_MAPA[ch] !== undefined ? PDF_MAPA[ch] : ch;
+    for (let j = 0; j < r.length; j++) out += r.charCodeAt(j) < 256 ? r[j] : '?';
+  }
+  return out;
+}
+function pdfEsc(v) { return pdfTexto(v).replace(/([\\()])/g, '\\$1'); }
+function pdfBytes(str) { const a = new Uint8Array(str.length); for (let i = 0; i < str.length; i++) a[i] = str.charCodeAt(i) & 255; return a; }
+function pdfDeB64(b64) { const b = atob(b64); const a = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; }
+function pdfConcat(lista) {
+  let n = 0; lista.forEach(u => n += u.length);
+  const out = new Uint8Array(n); let k = 0;
+  lista.forEach(u => { out.set(u, k); k += u.length; });
+  return out;
+}
+/** Ancho aproximado de un texto en Helvetica. Alcanza para no pasarse del margen. */
+function pdfAncho(t, size, bold) { return pdfTexto(t).length * size * (bold ? 0.56 : 0.51); }
+
+/** Gráficos a tamaño de informe: se dibujan fuera de pantalla con el mismo código. */
+function pdfGraficos() {
+  const cont = document.createElement('div');
+  cont.style.cssText = 'position:fixed;left:-20000px;top:0;width:900px;pointer-events:none';
+  const uno = () => { const c = document.createElement('canvas'); c.style.cssText = 'display:block;width:860px;height:290px'; cont.appendChild(c); return c; };
+  const y = uno(), v = uno(), a = uno();
+  document.body.appendChild(cont);
+  let out = [];
+  try {
+    drawCharts({ y:y, v:v, a:a });
+    // el ancho del JPEG es el del lienzo, no el del CSS: el lienzo lleva el dpr adentro
+    out = [y, v, a].map(c => ({ url:c.toDataURL('image/jpeg', 0.82), w:c.width, h:c.height }));
+  } catch (e) {}
+  cont.remove();
+  return out;
+}
+
+function informePDF() {
+  const A = S.A;
+  if (!S.hasVideo || !A) { $('#pdfOut').innerHTML = '<div class="warnbox">Carga un video y analiza antes de pedir el informe.</div>'; return; }
+  $('#pdfOut').innerHTML = '<div class="infobox">Armando el informe…</div>';
+  const imgs = [];                     // {bytes,w,h}
+  const meterImg = (dataURL, w, h) => {
+    if (!dataURL || dataURL.indexOf('data:image/jpeg') !== 0) return -1;
+    imgs.push({ bytes:pdfDeB64(dataURL.split(',')[1]), w:w, h:h });
+    return imgs.length - 1;
+  };
+  const pags = [];
+  let ops = [], y = PDF_H - PDF_M;
+  const cerrar = () => { pags.push(ops.join('\n')); ops = []; y = PDF_H - PDF_M; };
+  const sitio = alto => { if (y - alto < PDF_M + 22) cerrar(); };
+  const rgb = c => (c[0] / 255).toFixed(3) + ' ' + (c[1] / 255).toFixed(3) + ' ' + (c[2] / 255).toFixed(3);
+  const GRIS = [90, 96, 104], NEGRO = [20, 24, 30], SUAVE = [130, 136, 145];
+  const texto = (t, x, size, bold, col) => {
+    ops.push(rgb(col || NEGRO) + ' rg BT /' + (bold ? 'F2' : 'F1') + ' ' + size + ' Tf 1 0 0 1 ' +
+             x.toFixed(1) + ' ' + y.toFixed(1) + ' Tm (' + pdfEsc(t) + ') Tj ET');
+  };
+  const parrafo = (t, size, bold, col, x, ancho) => {
+    x = x === undefined ? PDF_M : x;
+    ancho = ancho || (PDF_W - PDF_M - x);
+    const pal = pdfTexto(t).split(' ');
+    let linea = '';
+    const salida = [];
+    pal.forEach(w => {
+      const prueba = linea ? linea + ' ' + w : w;
+      if (pdfAncho(prueba, size, bold) > ancho && linea) { salida.push(linea); linea = w; }
+      else linea = prueba;
+    });
+    if (linea) salida.push(linea);
+    salida.forEach(l => { sitio(size * 1.35); texto(l, x, size, bold, col); y -= size * 1.35; });
+  };
+  const regla = () => { sitio(8); ops.push('0.80 0.82 0.85 RG 0.6 w ' + PDF_M + ' ' + y.toFixed(1) + ' m ' + (PDF_W - PDF_M).toFixed(1) + ' ' + y.toFixed(1) + ' l S'); y -= 8; };
+  const titulo = t => { y -= 6; sitio(24); parrafo(t, 12.5, true, NEGRO); y -= 2; regla(); };
+  const tabla = (cab, filas, anchos, cols) => {
+    const size = 8.6;
+    const pinta = (celdas, bold, col) => {
+      sitio(size * 1.5);
+      let x = PDF_M;
+      celdas.forEach((c, i) => {
+        const der = i > 0;
+        const cx = der ? x + anchos[i] - Math.min(anchos[i] - 2, pdfAncho(c, size, bold)) : x;
+        texto(c, cx, size, bold, (cols && cols[i]) || col);
+        x += anchos[i];
+      });
+      y -= size * 1.5;
+    };
+    pinta(cab, true, SUAVE);
+    ops.push('0.85 0.87 0.90 RG 0.5 w ' + PDF_M + ' ' + (y + 4).toFixed(1) + ' m ' + (PDF_W - PDF_M).toFixed(1) + ' ' + (y + 4).toFixed(1) + ' l S');
+    filas.forEach(f => pinta(f, f[1] === '' && f[2] === '', f[1] === '' && f[2] === '' ? SUAVE : GRIS));
+    y -= 4;
+  };
+  const imagen = (idx, anchoPt) => {
+    if (idx < 0) return;
+    const im = imgs[idx];
+    const w = Math.min(anchoPt, PDF_W - 2 * PDF_M);
+    const h = w * im.h / im.w;
+    sitio(h + 6);
+    ops.push('q ' + w.toFixed(1) + ' 0 0 ' + h.toFixed(1) + ' ' + PDF_M + ' ' + (y - h).toFixed(1) + ' cm /Im' + idx + ' Do Q');
+    y -= h + 8;
+  };
+
+  /* ---------------- portada ---------------- */
+  const V = { valid:['VÁLIDO', [21, 128, 61]], invalid:['NO VÁLIDO', [185, 28, 28]], inconclusive:['NO CONCLUYENTE', [180, 83, 9]] };
+  const v = V[A.verdict] || V.inconclusive;
+  ops.push(rgb(v[1]) + ' rg ' + PDF_M + ' ' + (y - 34) + ' ' + (PDF_W - 2 * PDF_M) + ' 42 re f');
+  y -= 12;
+  texto(v[0] + '  \u00b7  ' + ({ squat:'Sentadilla', bench:'Press de banca', deadlift:'Peso muerto' })[S.lift], PDF_M + 10, 15, true, [255, 255, 255]);
+  y -= 16;
+  parrafo(A.reason || '', 8.5, false, [255, 255, 255], PDF_M + 10, PDF_W - 2 * PDF_M - 20);
+  y -= 16;
+  const cal = S.calib.pxPerCm ? fmt(S.calib.pxPerCm, 2) + ' px/cm (' + (S.calib.method || 'referencia') + ')' : 'sin calibrar';
+  parrafo('Archivo: ' + (S.name || '\u2014') + '  \u00b7  ' + S.vw + 'x' + S.vh + ' px  \u00b7  ' + S.fps + ' fps  \u00b7  rango ' +
+          S.inA + '-' + S.inB + ' (' + fmt((S.inB - S.inA + 1) / S.fps, 2) + ' s)', 8.5, false, GRIS);
+  parrafo('Escala: ' + cal + '  \u00b7  Informe generado el ' + new Date().toLocaleString(), 8.5, false, GRIS);
+  y -= 4;
+
+  /* ---------------- frame anotado ---------------- */
+  try {
+    const cpng = composePNG();
+    const iFrame = meterImg(cpng.toDataURL('image/jpeg', 0.85), cpng.width, cpng.height);
+    titulo('Frame analizado (' + S.cur + ')');
+    imagen(iFrame, Math.min(300, PDF_W - 2 * PDF_M));
+  } catch (e) {}
+
+  /* ---------------- parámetros ---------------- */
+  const P = paramsGenerales();
+  titulo('Parámetros de la serie');
+  if (!P) parrafo('No hay repeticiones detectadas: hace falta la barra seguida en el rango y la escala calibrada.', 9, false, GRIS);
+  else {
+    tabla(['Parámetro', 'Promedio', 'Máximo', 'Mínimo'], paramsFilas(P), [190, 105, 105, 105]);
+    parrafo(P.reps + ' repetición(es) en ' + fmt(P.tTotal, 1) + ' s.' +
+      (P.perd ? '  Pérdida de velocidad: primera a última ' + fmt(P.perd.primUlt, 1) + ' %, mejor a última ' +
+                fmt(P.perd.mejorUlt, 1) + ' %, mejor a peor ' + fmt(P.perd.mejorPeor, 1) + ' %.' : '') +
+      (P.banda !== null ? '  Banda de cada velocidad: ±' + fmt(P.banda, 1) + ' %; una diferencia menor que eso no se distingue del ruido.' : ''),
+      8.5, false, GRIS);
+    y -= 2;
+    if (S.reps && S.reps.length) {
+      titulo('Repetici\u00f3n por repetici\u00f3n');
+      tabla(['Rep', 'Baja m/s', 'Sube m/s', 'Pico m/s', 'Dur s', 'ROM cm'],
+        S.reps.map(r => [String(r.n), fmt(r.vEcc, 3), fmt(r.vMean, 3), fmt(r.vPeak, 2), fmt(r.durS, 2), fmt(r.romCm, 1)]),
+        [60, 90, 90, 90, 80, 95]);
+    }
+  }
+
+  /* ---------------- gráficos ---------------- */
+  const gs = pdfGraficos();
+  const nom = ['Altura de la barra (cm vs s)', 'Velocidad vertical (cm/s vs s)', 'Ángulos (grados vs s)'];
+  cerrar();
+  parrafo('Gráficos', 12.5, true, NEGRO); regla();
+  gs.forEach((g, i) => {
+    const idx = meterImg(g.url, g.w, g.h);
+    if (idx < 0) return;
+    sitio(200);
+    parrafo(nom[i], 9, true, GRIS);
+    imagen(idx, PDF_W - 2 * PDF_M);
+  });
+
+  /* ---------------- criterios ---------------- */
+  const ET = { ok:'CUMPLE', fail:'NO CUMPLE', inconclusive:'NO CONCLUYENTE', manual:'A VERIFICAR', na:'NO APLICA' };
+  const COL = { ok:[21, 128, 61], fail:[185, 28, 28], inconclusive:[180, 83, 9], manual:[90, 96, 104], na:[140, 146, 155] };
+  cerrar();                                   // los criterios empiezan en hoja limpia
+  titulo('Criterios del reglamento');
+  ['AUTO', 'ASISTIDO', 'MANUAL'].forEach(tp => {
+    const lista = (A.items || []).filter(i => i.type === tp);
+    if (!lista.length) return;
+    sitio(30);
+    parrafo({ AUTO:'AUTO · medible geométricamente', ASISTIDO:'ASISTIDO · la app señala, tú confirmas',
+              MANUAL:'MANUAL · imposible desde el video' }[tp], 9, true, SUAVE);
+    lista.forEach(it => {
+      const val = (it.value !== null && it.value !== undefined)
+        ? (it.unc !== null && it.unc !== undefined ? fmt(it.value, 1) + ' +-' + fmt(it.unc, 1) : fmt(it.value, 1)) : '';
+      sitio(26);
+      const ancho = PDF_W - 2 * PDF_M - 120;
+      texto(it.code, PDF_M, 8.6, true, NEGRO);
+      texto(it.label.slice(0, 64), PDF_M + 26, 8.6, false, NEGRO);
+      texto(ET[it.status] || '', PDF_W - PDF_M - pdfAncho(ET[it.status] || '', 8.6, true), 8.6, true, COL[it.status] || GRIS);
+      y -= 11;
+      if (val) { texto(val, PDF_M + 26, 8, false, SUAVE); y -= 10; }
+      y -= 2;
+    });
+    y -= 4;
+  });
+  sitio(40);
+  regla();
+  parrafo('Herramienta de entrenamiento: no sustituye el criterio de un árbitro IPF. Cada medida se muestra con su banda de ' +
+          'incertidumbre; cuando el margen es menor que la banda, el resultado es NO CONCLUYENTE a propósito. El video se ' +
+          'procesó en el dispositivo y no se subió a ningún lado.', 7.6, false, SUAVE);
+  cerrar();
+
+  /* ---------------- armado del archivo ---------------- */
+  const objs = [];
+  const nImg = imgs.length, nPag = pags.length;
+  const objImg = 5, objPag = 5 + nImg;
+  const recursos = '/Font<</F1 3 0 R/F2 4 0 R>>/XObject<<' +
+    imgs.map((im, i) => '/Im' + i + ' ' + (objImg + i) + ' 0 R').join('') + '>>';
+  const kids = [];
+  for (let i = 0; i < nPag; i++) kids.push((objPag + i * 2) + ' 0 R');
+  objs.push(pdfBytes('<</Type/Catalog/Pages 2 0 R>>'));
+  objs.push(pdfBytes('<</Type/Pages/Kids[' + kids.join(' ') + ']/Count ' + nPag + '>>'));
+  objs.push(pdfBytes('<</Type/Font/Subtype/Type1/BaseFont/Helvetica/Encoding/WinAnsiEncoding>>'));
+  objs.push(pdfBytes('<</Type/Font/Subtype/Type1/BaseFont/Helvetica-Bold/Encoding/WinAnsiEncoding>>'));
+  imgs.forEach(im => {
+    objs.push(pdfConcat([
+      pdfBytes('<</Type/XObject/Subtype/Image/Width ' + im.w + '/Height ' + im.h +
+               '/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length ' + im.bytes.length + '>>\nstream\n'),
+      im.bytes, pdfBytes('\nendstream')]));
+  });
+  pags.forEach((cont, i) => {
+    objs.push(pdfBytes('<</Type/Page/Parent 2 0 R/MediaBox[0 0 ' + PDF_W.toFixed(2) + ' ' + PDF_H.toFixed(2) + ']/Resources<<' +
+                       recursos + '>>/Contents ' + (objPag + i * 2 + 1) + ' 0 R>>'));
+    const b = pdfBytes(cont);
+    objs.push(pdfConcat([pdfBytes('<</Length ' + b.length + '>>\nstream\n'), b, pdfBytes('\nendstream')]));
+  });
+  const partes = [];
+  let largo = 0;
+  const meter = u => { partes.push(u); largo += u.length; };
+  meter(pdfBytes('%PDF-1.4\n%\u00e2\u00e3\u00cf\u00d3\n'));
+  const offs = [];
+  objs.forEach((o, i) => {
+    offs.push(largo);
+    meter(pdfBytes((i + 1) + ' 0 obj\n'));
+    meter(o);
+    meter(pdfBytes('\nendobj\n'));
+  });
+  const xref = largo;
+  let x = 'xref\n0 ' + (objs.length + 1) + '\n0000000000 65535 f \n';
+  offs.forEach(o => { x += ('0000000000' + o).slice(-10) + ' 00000 n \n'; });
+  x += 'trailer\n<</Size ' + (objs.length + 1) + '/Root 1 0 R>>\nstartxref\n' + xref + '\n%%EOF\n';
+  meter(pdfBytes(x));
+  const blob = new Blob([pdfConcat(partes)], { type:'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  dl('informe-ipf-' + S.lift + '.pdf', url);
+  $('#pdfOut').innerHTML = '<div class="okbox">Informe listo: ' + fmt(blob.size / 1048576, 2) + ' MB, ' + nPag + ' p\u00e1gina(s).<br>' +
+    'Si la descarga no arranc\u00f3 sola, <a href="' + url + '" download="informe-ipf.pdf" style="color:#9ff0bd">gu\u00e1rdalo desde ac\u00e1</a>.</div>';
+  return blob;
+}
+
 function composePNG() {
   const A = S.A;
   const bh = Math.round(S.vh * 0.075) + 18;
@@ -4646,6 +5092,7 @@ function init() {
   };
   $('#modal').onclick = () => $('#modal').classList.remove('on');
   $('#bVid').onclick = exportarVideo;
+  $('#bPdf').onclick = () => { try { informePDF(); } catch (e) { $('#pdfOut').innerHTML = '<div class="errbox">No se pudo armar el informe: ' + ((e && e.message) || e) + '</div>'; } };
   $('#bJson').onclick = () => dl('ipf-' + S.lift + '.json', URL.createObjectURL(new Blob([JSON.stringify(toJSON(), null, 2)], { type:'application/json' })));
   $('#bJsonCopy').onclick = () => copyTxt(JSON.stringify(toJSON(), null, 2), 'JSON');
   $('#fJson').onchange = async e => {
