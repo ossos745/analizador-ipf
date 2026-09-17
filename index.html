@@ -223,7 +223,7 @@ td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 <div class="wrap">
   <header class="top">
     <div class="verdict v-none" id="verdict" title="Tocar para ver el motivo completo">
-      <span class="ver" id="verTag">v17</span>
+      <span class="ver" id="verTag">v18</span>
       <span class="vTitle" id="vTitle">SIN ANALIZAR</span>
       <span class="vSub" id="vSub">Carga un video y marca los puntos para obtener un veredicto.</span>
     </div>
@@ -551,7 +551,7 @@ td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
           </div>
           <div class="card">
             <h2>Repeticiones y velocidad</h2>
-            <div class="hint">Necesita la barra seguida en el rango y la escala calibrada. Se detecta cada repetición por los máximos y mínimos de la altura de la barra, y se mide la fase concéntrica de cada una.</div>
+            <div class="hint">Necesita la escala calibrada y la barra seguida —con lo que haya: si el seguimiento viene flojo se usa igual y se avisa—. Cada repetición se detecta por los máximos y mínimos de la altura de la barra, y se mide la fase concéntrica de cada una.</div>
             <button class="btn pri wide" id="bReps">Detectar repeticiones</button>
             <div id="repsOut"></div>
           </div>
@@ -661,7 +661,7 @@ td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
             —imagen, video, JSON, informe— sale de ahí y lo compartes tú si quieres.</p>
             <p>Todo veredicto tiene tres estados, nunca dos: <b>VÁLIDO</b>, <b>NO VÁLIDO</b> y <b>NO CONCLUYENTE</b>.
             Si el margen medido es menor que la banda de incertidumbre, el resultado es no concluyente a propósito.</p>
-            <p class="hint" id="verAyuda">Versión de la app: <b>v17</b>.</p>
+            <p class="hint" id="verAyuda">Versión de la app: <b>v18</b>.</p>
           </div>
           <div class="card">
             <h2>Cómo filmar</h2>
@@ -1248,6 +1248,14 @@ let drag = null, panDrag = null;
    más, lo que se quiere mirar se va de la pantalla al segundo pellizco.      */
 const punteros = new Map();
 let pinch = null, tras2Dedos = false;
+/* Los dedos se apoyan donde caen, y en un video vertical eso es casi siempre la
+   franja negra de los costados, que NO es el lienzo. Por eso el marco entero
+   escucha: si sólo escuchara el video, el pellizco no arrancaba nunca.       */
+const lienzo = $('#canvasWrap');
+function enVideo(e) {
+  const r = ov.getBoundingClientRect();
+  return e.clientX >= r.left - 4 && e.clientX <= r.right + 4 && e.clientY >= r.top - 4 && e.clientY <= r.bottom + 4;
+}
 function wrapXY(e) {
   const r = $('#canvasWrap').getBoundingClientRect();
   return { x:e.clientX - r.left, y:e.clientY - r.top };
@@ -1281,12 +1289,16 @@ function pinchMover() {
   }
   const sl = $('#inZoom'); if (sl) sl.value = S.zoom;
   fitCanvas();
-  const hz = $('#zoomVal'); if (hz) hz.textContent = fmt(S.zoom, 1) + '×';
+  const hz = $('#hudZoom');
+  if (hz && S.zoom > 1.02) hz.textContent = fmt(S.zoom, 1) + '× · tocar para volver';
+  else updateTransport();
 }
-ov.addEventListener('pointerup', e => { punteros.delete(e.pointerId); if (punteros.size < 2) pinch = null; if (!punteros.size) tras2Dedos = false; });
-ov.addEventListener('pointercancel', e => { punteros.delete(e.pointerId); if (punteros.size < 2) pinch = null; if (!punteros.size) tras2Dedos = false; });
-ov.addEventListener('pointerdown', e => {
+const soltar = e => { punteros.delete(e.pointerId); if (punteros.size < 2) pinch = null; if (!punteros.size) tras2Dedos = false; };
+lienzo.addEventListener('pointerup', soltar);
+lienzo.addEventListener('pointercancel', soltar);
+lienzo.addEventListener('pointerdown', e => {
   if (!S.hasVideo) return;
+  if (e.target && e.target.closest && e.target.closest('.boxbar')) return;   // esos son botones
   punteros.set(e.pointerId, wrapXY(e));
   if (punteros.size >= 2) {
     // el primer dedo pudo haber colocado un punto al apoyarse: se deshace
@@ -1297,7 +1309,8 @@ ov.addEventListener('pointerdown', e => {
     return;
   }
   if (tras2Dedos) return;                       // quedan dedos del pellizco anterior
-  try { ov.setPointerCapture(e.pointerId); } catch (err) {}
+  if (!enVideo(e)) return;                      // el borde negro no es el video
+  try { lienzo.setPointerCapture(e.pointerId); } catch (err) {}
   const p = toVideo(e);
   if (S.tool === 'pan') { panDrag = { x:e.clientX, y:e.clientY, px:S.pan.x, py:S.pan.y }; return; }
 
@@ -1377,7 +1390,7 @@ ov.addEventListener('pointerdown', e => {
   }
   toast('Elige un punto en la pestaña Puntos, o toca más cerca de uno ya marcado para moverlo');
 });
-ov.addEventListener('pointermove', e => {
+lienzo.addEventListener('pointermove', e => {
   if (punteros.has(e.pointerId)) punteros.set(e.pointerId, wrapXY(e));
   if (punteros.size >= 2) { pinchMover(); return; }
   if (tras2Dedos) return;
@@ -1420,8 +1433,8 @@ function endDrag() {
   drag = null; panDrag = null; hideLens();
   if (S.hasVideo) refreshAll();
 }
-ov.addEventListener('pointerup', endDrag);
-ov.addEventListener('pointercancel', endDrag);
+lienzo.addEventListener('pointerup', endDrag);
+lienzo.addEventListener('pointercancel', endDrag);
 
 function armNext(k) {
   const list = visiblePts();
@@ -1885,15 +1898,59 @@ function kfMensaje(r) {
   }
 }
 
+/** Altura (cm, positivo hacia arriba) y velocidad de la barra a partir de la
+    MISMA trayectoria que se dibuja sobre el video. A diferencia de barSeries(),
+    no exige que el seguimiento sea firme: los parámetros de la serie son
+    información —velocidades, tiempos, recorrido—, no un veredicto del
+    reglamento, y negarlos porque el seguimiento viene justo no le sirve a nadie.
+    Los criterios de las Reglas siguen usando barSeries().dense.              */
+function serieDibujada() {
+  const n = S.inB - S.inA + 1;
+  const P = new Array(n).fill(null), h = new Array(n).fill(null);
+  const out = { n:n, pts:P, h:h, hs:new Array(n).fill(null), v:new Array(n).fill(null), cob:0, firmes:0 };
+  if (!S.calib.pxPerCm) return out;
+  const pts = barPuntos(S.inB);
+  if (!pts.length) return out;
+  const p0 = pts[0];
+  pts.forEach(o => { P[o.f - S.inA] = o; h[o.f - S.inA] = belowPx(p0, o) / S.calib.pxPerCm; });
+  // huecos cortos: se rellenan en línea recta. Los largos quedan vacíos, y así
+  // el hueco se ve en la cobertura en vez de disimularse.
+  let ult = null;
+  for (let i = 0; i < n; i++) {
+    if (h[i] === null) continue;
+    if (ult !== null && i - ult > 1 && i - ult <= 8) {
+      for (let k = ult + 1; k < i; k++) {
+        const t = (k - ult) / (i - ult);
+        h[k] = h[ult] + (h[i] - h[ult]) * t;
+        P[k] = { f:S.inA + k, x:P[ult].x + (P[i].x - P[ult].x) * t, y:P[ult].y + (P[i].y - P[ult].y) * t, firme:false };
+      }
+    }
+    ult = i;
+  }
+  out.hs = h.map((v, i) => {
+    if (v === null) return null;
+    const a = [h[i - 1], v, h[i + 1]].filter(x => x !== null && x !== undefined);
+    return a.reduce((x, y) => x + y, 0) / a.length;
+  });
+  out.v = out.hs.map((x, i) => (i === 0 || out.hs[i] === null || out.hs[i - 1] === null) ? null : (out.hs[i] - out.hs[i - 1]) * S.fps);
+  let con = 0, fir = 0;
+  for (let i = 0; i < n; i++) if (h[i] !== null) con++;
+  pts.forEach(o => { if (o.firme) fir++; });
+  out.cob = con / n;
+  out.firmes = pts.length ? fir / pts.length : 0;
+  return out;
+}
+
 /* ------------------------------ repeticiones -------------------------------
    Se detectan por histéresis sobre la altura de la barra: se considera "arriba"
    por encima del 75 % del recorrido y "abajo" por debajo del 25 %, así el ruido
    del seguimiento no parte una repetición en dos.                              */
 function detectReps() {
-  const B = barSeries();
+  const B = serieDibujada();
   S.reps = [];
-  if (!B.dense) return { err:'Necesito la barra seguida en (casi) todos los frames del rango. Marca el disco y usa “Seguir la barra”.' };
-  if (!S.calib.pxPerCm) return { err:'Sin calibrar no hay centímetros ni metros por segundo. Marca el disco o traza la referencia de escala.' };
+  if (!S.calib.pxPerCm) return { err:'Sin calibrar no hay centímetros ni metros por segundo: marca el disco con el recuadro o traza la referencia de escala. Es lo único que no puedo suplir.' };
+  if (!B.cob) return { err:'No hay ninguna posición de la barra en el rango. Marca el disco y usa “Seguir la barra en el rango”.' };
+  const calidad = { cob:B.cob, firmes:B.firmes };
   const val = f => B.hs[bIdx(f)];
   let hi = -1e9, lo = 1e9;
   for (let f = S.inA; f <= S.inB; f++) { const v = val(f); if (v === null || v === undefined) continue; hi = Math.max(hi, v); lo = Math.min(lo, v); }
@@ -1924,7 +1981,20 @@ function detectReps() {
       }
     }
   }
-  if (!reps.length) return { err:'No se cerró ninguna repetición: la barra no volvió a subir por encima del 75 % del recorrido. Revisa el rango recortado.' };
+  if (!reps.length) {
+    // Último intento: una sola repetición entre el punto más alto anterior al
+    // más bajo y el más alto posterior. Sirve para el caso corriente de un
+    // video con un solo intento y metraje de sobra al principio y al final.
+    let fBajo = null, vBajo = 1e9;
+    for (let f = S.inA; f <= S.inB; f++) { const v = val(f); if (v === null || v === undefined) continue; if (v < vBajo) { vBajo = v; fBajo = f; } }
+    if (fBajo !== null) {
+      let f0 = fBajo, v0 = vBajo, f1 = fBajo, v1 = vBajo;
+      for (let f = S.inA; f < fBajo; f++) { const v = val(f); if (v !== null && v !== undefined && v > v0) { v0 = v; f0 = f; } }
+      for (let f = fBajo; f <= S.inB; f++) { const v = val(f); if (v !== null && v !== undefined && v > v1) { v1 = v; f1 = f; } }
+      if (f1 > fBajo && (v1 - vBajo) > rom * 0.6) reps.push({ top0:f0, bottom:fBajo, top1:f1 });
+    }
+  }
+  if (!reps.length) return { err:'No encuentro ninguna bajada y subida en el rango: la barra no recorre lo suficiente. Revisa el rango.' };
 
   // Caminar hacia atrás al sacar la barra, y sobre todo devolverla a los soportes,
   // también hacen subir y bajar la altura. Lo que los distingue de una repetición
@@ -1943,10 +2013,33 @@ function detectReps() {
     if (vert > 5 && dx > vert * 0.55) { descartadas.push({ f:r.bottom, dx:dx / S.calib.pxPerCm }); return false; }
     return true;
   });
-  if (!repsOk.length) {
-    return { err:'Los tramos de subida y bajada que encontré se mueven demasiado en horizontal: parecen la caminata de salida o la devolución a los soportes, no repeticiones. Recorta el rango a la serie.' };
-  }
-  reps.length = 0; repsOk.forEach(r => reps.push(r));
+  // Si el filtro se llevó todo por delante, no se devuelve un portazo: se dan
+  // igual los números y se avisa de qué sospecha. Recortar el rango es una
+  // sugerencia, no un peaje.
+  let sospecha = false;
+  if (!repsOk.length) { sospecha = true; descartadas.length = 0; }
+  else { reps.length = 0; repsOk.forEach(r => reps.push(r)); }
+
+  // Dejar el video corriendo antes y después del intento es lo normal, y eso
+  // mete medio minuto de barra quieta arriba dentro de la repetición: el máximo
+  // de una meseta larga cae en cualquier lado. Los bordes se llevan a donde el
+  // movimiento empieza y termina de verdad, que es lo que mide la velocidad.
+  const tolAlto = Math.max(1, rom * 0.04);        // cm
+  reps.forEach(r => {
+    const vTop1 = val(r.top1), vTop0 = val(r.top0);
+    if (vTop1 !== null && vTop1 !== undefined) {
+      for (let f = r.bottom; f <= r.top1; f++) {
+        const v = val(f);
+        if (v !== null && v !== undefined && v >= vTop1 - tolAlto) { r.top1 = f; break; }
+      }
+    }
+    if (vTop0 !== null && vTop0 !== undefined) {
+      for (let f = r.bottom; f >= r.top0; f--) {
+        const v = val(f);
+        if (v !== null && v !== undefined && v >= vTop0 - tolAlto) { r.top0 = f; break; }
+      }
+    }
+  });
 
   const relCal = calRel();
   reps.forEach((r, i) => {
@@ -1971,7 +2064,7 @@ function detectReps() {
     r.vU = r.vMean === null ? null : Math.abs(r.vMean) * Math.hypot(relRom, relT);
   });
   S.reps = reps;
-  return { reps:reps, rom:rom, descartadas:descartadas };
+  return { reps:reps, rom:rom, descartadas:descartadas, calidad:calidad, sospecha:sospecha };
 }
 
 /* --------------------------- calidad de la toma ---------------------------- */
@@ -3615,6 +3708,8 @@ function renderParams() {
 function renderReps(r) {
   const box = $('#repsOut'), loss = $('#repsLoss');
   if (!box) return;
+  // el aviso de calidad tiene que sobrevivir a los redibujados, no sólo al clic
+  if (r) S._repsR = r; else r = S._repsR || null;
   if (r && r.err) { box.innerHTML = '<div class="warnbox">' + r.err + '</div>'; loss.textContent = 'Sin datos todavía.'; renderParams(); return; }
   const reps = S.reps;
   renderParams();
@@ -3646,6 +3741,11 @@ function renderReps(r) {
       : '') +
     '<div class="row"><button class="btn sm" id="bRecortarSerie">Recortar el rango a la serie</button></div>' +
     (S.fps < 60 ? '<div class="warnbox">A ' + S.fps + ' fps la columna <b>Pico</b> es poco confiable: el máximo real puede caer entre frames. La velocidad media aguanta mucho mejor.</div>' : '') +
+    ((r && r.sospecha) ? '<div class="warnbox">La barra se corre bastante en horizontal durante estos tramos. Puede ser la caminata de salida o la devolución a los soportes en vez de una repetición: te doy los números igual, pero comprueba en el video que los frames de cada repetición sean los correctos.</div>' : '') +
+    ((r && r.calidad && (r.calidad.cob < 0.9 || r.calidad.firmes < 0.6))
+      ? '<div class="warnbox">Estos números salen de un seguimiento que cubre el ' + fmt(r.calidad.cob * 100, 0) +
+        ' % del rango con un ' + fmt(r.calidad.firmes * 100, 0) + ' % de posiciones firmes. Sirven para comparar repeticiones entre sí; ' +
+        'para una cifra fina, sigue la barra otra vez con el rango recortado a la serie.</div>' : '') +
     '<div class="hint">Todo esto se apoya en que los fps declarados (' + S.fps + ') sean los reales, y en el seguimiento del disco (correlación media ' + fmt(calSeg * 100, 0) + ' %).</div>';
   const bRec = $('#bRecortarSerie');
   if (bRec) bRec.onclick = () => {
@@ -3729,6 +3829,14 @@ function renderToggles() {
     box.appendChild(l);
   }
 }
+/** Qué parte del rango tiene posición de la barra, contando lo que se dibuja. */
+function segCob() {
+  const n = S.inB - S.inA + 1;
+  if (!S.tracked.bar || n < 1) return 0;
+  let c = 0;
+  for (let f = S.inA; f <= S.inB; f++) if (S.tracked.bar[f]) c++;
+  return c / n;
+}
 function updateTransport() {
   $('#tInfo').textContent = S.hasVideo ? ('f ' + S.cur + '/' + (S.nFrames - 1) + ' · ' + fmt(S.cur / S.fps, 2) + ' s') : '—';
   $('#bPlay').textContent = vid.paused ? '▶' : '❚❚';
@@ -3737,9 +3845,12 @@ function updateTransport() {
   hud.innerHTML =
     '<span class="chip ' + (S.calib.pxPerCm ? 'on' : 'bad') + '">' + (S.calib.pxPerCm ? fmt(S.calib.pxPerCm, 2) + ' px/cm' : 'sin calibrar') + '</span>' +
     (S.armed ? '<span class="chip on">colocando: ' + PT[S.armed].n + '</span>' : '') +
-    (A && A.bar && A.bar.dense ? '<span class="chip on">barra seguida</span>' : '') +
+    (S.tracked.bar ? '<span class="chip ' + (segCob() > 0.85 ? 'on' : '') + '">barra seguida ' + fmt(segCob() * 100, 0) + ' %</span>' : '') +
+    (S.zoom > 1.02 ? '<span class="chip on" id="hudZoom" style="pointer-events:auto">' + fmt(S.zoom, 1) + '× · tocar para volver</span>' : '') +
     (S.layers.path && S.lift !== 'bench' ? '<span class="chip" style="border-color:#38bdf8;color:#bae6fd">— bajada</span><span class="chip" style="border-color:#ef4444;color:#fecaca">— subida</span>' : '') +
     (S.mode === 'cal' ? '<span class="chip on">trazando referencia</span>' : '');
+  const hz = $('#hudZoom');
+  if (hz) hz.onclick = () => { S.zoom = 1; S.pan = { x:0, y:0 }; const sl = $('#inZoom'); if (sl) sl.value = 1; fitCanvas(); updateTransport(); };
 }
 
 let refreshT = null;
