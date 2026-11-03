@@ -430,6 +430,11 @@ angular típica), `fases` (duración de cada fase) y `trayectoria` (centro del d
 puntos `[t, x, y]` relativos al primer punto; `y` hacia arriba; en cm si hay calibración, si no
 en px). Son campos nuevos y opcionales: `formato` sigue en 2.
 
+Desde **v26** el video que vuelve por `postMessage` es el **video analizado**: el mismo de
+"Exportar video" (WebM, sólo el rango, con los puntos, el seguimiento de la barra y las líneas
+encima). El paquete lo marca con `video.anotado:true` y `video.rangoArchivo:[0, n-1]` (el archivo
+ya es sólo el rango). Si no se puede componer, va el original con `anotado:false`.
+
 ## Checklist de implementación
 
 **Lado del analizador — listo en v24:**
