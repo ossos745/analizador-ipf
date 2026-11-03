@@ -351,6 +351,10 @@ diferencia es información, no un error que haya que promediar.
               "velBajada":0.55, "velBajadaPico":0.9, "recorridoCm":41.2,
               "recorridoBanda":1.1, "durSubidaS":0.51, "durBajadaS":0.75,
               "frames":{ "arribaIni":61, "fondo":106, "arribaFin":149 } } ],
+  "angulos": { "banda":4, "frames":[ { "momento":"Máxima profundidad / punto bajo", "frame":106,
+               "rodilla":62, "cadera":55, "torso":42, "codo":58, "tobillo":68, "hombro":null } ] },
+  "fases": [ { "nombre":"Excéntrica", "s":0.75, "desde":61, "hasta":106 } ],
+  "trayectoria": { "unidad":"cm", "pts":[ [0, 0, 0], [0.03, 0.1, -0.8] ] },
   "incertidumbre": { "k":1.96, "sigmaPx":1.5, "pxPorCm":4.2, "calibrado":true },
   "aviso": "Herramienta de entrenamiento. No sustituye el criterio de un árbitro IPF…"
 }
@@ -420,6 +424,11 @@ dejas un campo donde pegar ese JSON, el puente funciona incluso sin que las dos
 apps se vean.
 
 ---
+
+Desde **v25** el paquete trae además `angulos` (por frame clave, en grados, con la banda
+angular típica), `fases` (duración de cada fase) y `trayectoria` (centro del disco, hasta 150
+puntos `[t, x, y]` relativos al primer punto; `y` hacia arriba; en cm si hay calibración, si no
+en px). Son campos nuevos y opcionales: `formato` sigue en 2.
 
 ## Checklist de implementación
 
